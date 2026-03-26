@@ -153,7 +153,7 @@ Se quiser contribuir:
 
 ## 📌 Autor
 
-Desenvolvido por **Erick VF**
+Desenvolvido por **Erick Barros**
 
 ---
 
