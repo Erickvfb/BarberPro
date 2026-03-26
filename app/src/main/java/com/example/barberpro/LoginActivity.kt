@@ -82,9 +82,7 @@ class LoginActivity : AppCompatActivity() {
 
         loginButton.postDelayed({
 
-            Toast.makeText(this, "Login realizado com sucesso!", Toast.LENGTH_SHORT).show()
-
-            val intent = Intent(this, MainActivity::class.java)
+            val intent = Intent(this, MainContainerActivity::class.java)
             startActivity(intent)
             finish()
 
@@ -117,14 +115,12 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun navigateToForgotPassword() {
-        Toast.makeText(this, "Recuperação de senha", Toast.LENGTH_SHORT).show()
-        // TODO: Navigate to forgot password screen
-        // val intent = Intent(this, ForgotPasswordActivity::class.java)
-        // startActivity(intent)
+        val intent = Intent(this, RecoverPasswordActivity::class.java)
+        startActivity(intent)
     }
 
     private fun navigateToSignUp() {
-        val intent = Intent(this, RegisterBarber::class.java)
+        val intent = Intent(this, RegisterBarberActivity::class.java)
         startActivity(intent)
     }
 

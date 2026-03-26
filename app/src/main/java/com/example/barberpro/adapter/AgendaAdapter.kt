@@ -8,7 +8,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.barberpro.R
 import com.example.barberpro.model.Appointment
-import com.example.barberpro.model.AppointmentStatus
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -25,9 +24,8 @@ sealed class AgendaItem {
  * Adapter for the agenda RecyclerView
  */
 class AgendaAdapter(
-    private val onAppointmentClick: (Appointment) -> Unit,
     private val onAppointmentDelete: (Appointment) -> Unit,
-    private val onAddTimeSlot: (String) -> Unit
+    private val onAppointmentClick: (Appointment) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val items = mutableListOf<AgendaItem>()
@@ -40,13 +38,19 @@ class AgendaAdapter(
     fun submitList(appointments: List<Appointment>) {
         items.clear()
 
+        // ✅ CORREÇÃO: Só adiciona se tiver appointments
+        if (appointments.isEmpty()) {
+            notifyDataSetChanged()
+            return
+        }
+
         // Group appointments by hour
         val groupedByTime = appointments.groupBy { appointment ->
             SimpleDateFormat("HH:00", Locale.getDefault()).format(appointment.startTime)
         }
 
-        // Create items with headers
-        groupedByTime.forEach { (time, timeAppointments) ->
+        // Create items with headers (ordenado por hora)
+        groupedByTime.toSortedMap().forEach { (time, timeAppointments) ->
             items.add(AgendaItem.TimeHeader(time))
             timeAppointments.forEach { appointment ->
                 items.add(AgendaItem.AppointmentItem(appointment))
@@ -96,13 +100,9 @@ class AgendaAdapter(
      */
     inner class TimeHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val timeText: TextView = itemView.findViewById(R.id.timeHeaderText)
-       private val addButton: View = itemView.findViewById(R.id.addTimeSlotButton)
 
         fun bind(time: String) {
             timeText.text = time
-            addButton.setOnClickListener {
-                onAddTimeSlot(time)
-            }
         }
     }
 
@@ -110,38 +110,35 @@ class AgendaAdapter(
      * ViewHolder for appointments
      */
     inner class AppointmentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val serviceNameText: TextView = itemView.findViewById(R.id.serviceNameText)
-        private val priceText: TextView = itemView.findViewById(R.id.priceText)
-        private val timeText: TextView = itemView.findViewById(R.id.timeText)
-        private val clientInitialText: TextView = itemView.findViewById(R.id.clientInitialText)
         private val clientNameText: TextView = itemView.findViewById(R.id.clientNameText)
-        private val statusText: TextView = itemView.findViewById(R.id.statusText)
+        private val clientInitialText: TextView = itemView.findViewById(R.id.clientInitialText)
+        private val serviceNameText: TextView = itemView.findViewById(R.id.serviceNameText)
+        private val servicePriceText: TextView = itemView.findViewById(R.id.servicePriceText)
+        private val timeText: TextView = itemView.findViewById(R.id.timeText)
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
 
         fun bind(appointment: Appointment) {
-            // Service info
+            // ✅ Cliente (agora em destaque no topo)
+            clientNameText.text = appointment.client.name
+            clientInitialText.text = appointment.client.name.take(2).uppercase()
+
+            // ✅ Serviço (agora embaixo)
             serviceNameText.text = appointment.service.name
 
-            // Price and duration
+            // ✅ Preço
             val formatter = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
-            priceText.text = "${appointment.service.durationMinutes} min • ${formatter.format(appointment.service.price)}"
+            servicePriceText.text = formatter.format(appointment.service.price)
 
-            // Time range
-            timeText.text = appointment.getTimeRange()
+            // ✅ Horário (HH:mm - HH:mm)
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val startTime = timeFormat.format(appointment.startTime)
 
-            // Client info
-            clientInitialText.text = appointment.client.getInitial()
-            clientNameText.text = appointment.client.name
-
-            // Status
-            statusText.text = appointment.status.displayName
-            statusText.setTextColor(android.graphics.Color.parseColor(appointment.status.color))
-
-            // Click listeners
+            // ✅ Click no card inteiro abre confirmação
             itemView.setOnClickListener {
                 onAppointmentClick(appointment)
             }
 
+            // ✅ Click no X deleta
             deleteButton.setOnClickListener {
                 onAppointmentDelete(appointment)
             }
