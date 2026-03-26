@@ -38,18 +38,15 @@ class AgendaAdapter(
     fun submitList(appointments: List<Appointment>) {
         items.clear()
 
-        // ✅ CORREÇÃO: Só adiciona se tiver appointments
         if (appointments.isEmpty()) {
             notifyDataSetChanged()
             return
         }
 
-        // Group appointments by hour
         val groupedByTime = appointments.groupBy { appointment ->
             SimpleDateFormat("HH:00", Locale.getDefault()).format(appointment.startTime)
         }
 
-        // Create items with headers (ordenado por hora)
         groupedByTime.toSortedMap().forEach { (time, timeAppointments) ->
             items.add(AgendaItem.TimeHeader(time))
             timeAppointments.forEach { appointment ->
@@ -118,27 +115,22 @@ class AgendaAdapter(
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
 
         fun bind(appointment: Appointment) {
-            // ✅ Cliente (agora em destaque no topo)
             clientNameText.text = appointment.client.name
             clientInitialText.text = appointment.client.name.take(2).uppercase()
 
-            // ✅ Serviço (agora embaixo)
             serviceNameText.text = appointment.service.name
 
-            // ✅ Preço
             val formatter = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
             servicePriceText.text = formatter.format(appointment.service.price)
 
-            // ✅ Horário (HH:mm - HH:mm)
+
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             val startTime = timeFormat.format(appointment.startTime)
 
-            // ✅ Click no card inteiro abre confirmação
             itemView.setOnClickListener {
                 onAppointmentClick(appointment)
             }
 
-            // ✅ Click no X deleta
             deleteButton.setOnClickListener {
                 onAppointmentDelete(appointment)
             }

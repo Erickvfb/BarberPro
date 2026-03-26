@@ -13,7 +13,6 @@ import com.example.barberpro.R
 import com.example.barberpro.model.*
 import com.example.barberpro.repository.AppointmentRepository
 import com.example.barberpro.repository.ClientsRepository
-import com.example.barberpro.util.TimeSlotAvailabilityChecker
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -42,8 +41,6 @@ class NewScheduleFragment : Fragment() {
     private val horarioSelecionado: Calendar = Calendar.getInstance()
 
     private val clientsRepository = ClientsRepository.getInstance()
-    private val scheduleConfig: BarberScheduleConfig
-        get() = ScheduleConfigManager.getScheduleConfig()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -111,11 +108,11 @@ class NewScheduleFragment : Fragment() {
 
     private fun selecionarServico() {
         val servicos = listOf(
-            Service("1", "Corte Social", 45.0, durationMinutes = 30),
-            Service("2", "Barba Completa", 25.0, durationMinutes = 20),
-            Service("3", "Corte + Barba", 65.0, durationMinutes = 50),
-            Service("4", "Platinado", 60.0, durationMinutes = 60),
-            Service("5", "Química", 80.0, durationMinutes = 90)
+            Service("1", "Corte Social", 45.0),
+            Service("2", "Barba Completa", 25.0),
+            Service("3", "Corte + Barba", 65.0),
+            Service("4", "Platinado", 60.0),
+            Service("5", "Química", 80.0)
         )
 
         val nomes = servicos.map {
@@ -153,53 +150,36 @@ class NewScheduleFragment : Fragment() {
             val format = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
             dataText.text = format.format(calendar.time)
 
-            // ✅ Limpar horário selecionado quando troca de data
+            // Limpar horário selecionado quando troca de data
             horarioText.text = "Selecionar horário"
-
-            // ✅ Verificar se tem horários disponíveis
-            val availableSlots = TimeSlotAvailabilityChecker
-                .getAvailableSlotsCount(calendar, scheduleConfig)
-
-            if (availableSlots == 0) {
-                toast("⚠️ Nenhum horário disponível nesta data")
-            } else {
-                toast("✅ $availableSlots horários disponíveis")
-            }
         }
 
         picker.show(parentFragmentManager, "DATE_PICKER")
     }
 
     private fun selecionarHorario() {
-        val data = dataSelecionada ?: run {
+        dataSelecionada ?: run {
             toast("Selecione uma data primeiro")
             return
         }
 
-        // ✅ Buscar apenas horários disponíveis
-        val horariosDisponiveis = TimeSlotAvailabilityChecker
-            .getAvailableTimeSlots(data, scheduleConfig)
+        // ✅ SOLUÇÃO SIMPLES: Usa TimeSlotGenerator que já filtra o almoço
+        val config = BarberConfig.getInstance()
+        val horarios = TimeSlotGenerator.generate(config)
 
-        if (horariosDisponiveis.isEmpty()) {
+        if (horarios.isEmpty()) {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Sem Horários Disponíveis")
-                .setMessage(buildString {
-                    append("Não há horários disponíveis para esta data.\n\n")
-                    append("Motivos possíveis:\n")
-                    append("• Todos os horários já estão ocupados\n")
-                    append("• Data fora do horário de funcionamento\n")
-                    append("• Horário de almoço\n\n")
-                    append("Selecione outra data.")
-                })
+                .setMessage("Não há horários disponíveis.\n\nVerifique as configurações.")
                 .setPositiveButton("OK", null)
                 .show()
             return
         }
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Selecionar Horário (${horariosDisponiveis.size} disponíveis)")
-            .setItems(horariosDisponiveis.toTypedArray()) { _, which ->
-                val horario = horariosDisponiveis[which]
+            .setTitle("Selecionar Horário")
+            .setItems(horarios.toTypedArray()) { _, which ->
+                val horario = horarios[which]
                 val parts = horario.split(":")
                 horarioSelecionado.set(Calendar.HOUR_OF_DAY, parts[0].toInt())
                 horarioSelecionado.set(Calendar.MINUTE, parts[1].toInt())
@@ -236,22 +216,6 @@ class NewScheduleFragment : Fragment() {
             set(Calendar.MINUTE, horarioSelecionado.get(Calendar.MINUTE))
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-        }
-
-        // ✅ Verificação final de disponibilidade
-        val parts = horarioText.text.toString().split(":")
-        val isAvailable = TimeSlotAvailabilityChecker.getAvailableTimeSlots(data, scheduleConfig)
-            .contains("${parts[0]}:${parts[1]}")
-
-        if (!isAvailable) {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Horário Indisponível")
-                .setMessage("Este horário foi ocupado recentemente. Por favor, selecione outro horário.")
-                .setPositiveButton("OK") { _, _ ->
-                    horarioText.text = "Selecionar horário"
-                }
-                .show()
-            return
         }
 
         val appointment = Appointment(

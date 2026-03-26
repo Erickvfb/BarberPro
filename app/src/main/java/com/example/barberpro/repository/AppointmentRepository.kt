@@ -18,7 +18,6 @@ class AppointmentRepository private constructor() {
         loadMockData()
     }
 
-    /* ===================== APPOINTMENTS ===================== */
 
     suspend fun getAllAppointments(): Result<List<Appointment>> =
         withContext(Dispatchers.IO) {
@@ -47,21 +46,21 @@ class AppointmentRepository private constructor() {
             val hour = cal.get(Calendar.HOUR_OF_DAY)
             val minute = cal.get(Calendar.MINUTE)
 
-            // ⏰ horário de funcionamento
+            // horário de funcionamento
             if (hour < config.openingHour || hour >= config.closingHour) {
                 return@withContext Result.failure(
                     Exception("Fora do horário de funcionamento")
                 )
             }
 
-            // ⏱ slots fixos (30 em 30)
+            //slots fixos (30 em 30)
             if (minute % config.slotDurationMinutes != 0) {
                 return@withContext Result.failure(
                     Exception("Agendamentos apenas de 30 em 30 minutos")
                 )
             }
 
-            // ⛔ conflito de horário
+            // conflito de horário
             val conflict = appointments.any {
                 it.startTime == appointment.startTime
             }
@@ -123,8 +122,6 @@ class AppointmentRepository private constructor() {
             formatter.format(it.startTime)
         } ?: emptyList()
     }
-
-    /* ===================== MOCK DATA ===================== */
 
     private fun loadMockData() {
         clients.addAll(

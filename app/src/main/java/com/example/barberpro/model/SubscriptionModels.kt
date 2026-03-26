@@ -1,6 +1,5 @@
 package com.example.barberpro.model
 
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -14,12 +13,6 @@ enum class SubscriptionPlan(
 ) {
     TRIAL("Trial Gratuito", 0.0, 7),
     MONTHLY("Mensal", 29.90, 30);
-
-    fun getFormattedPrice(): String {
-        if (price == 0.0) return "Gratuito"
-        val formatter = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
-        return formatter.format(price)
-    }
 }
 
 /**

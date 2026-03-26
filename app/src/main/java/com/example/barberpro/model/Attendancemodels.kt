@@ -49,10 +49,4 @@ data class AttendanceRecord(
         if (status == AttendanceStatus.NO_SHOW) return 0.0
         return servicePrice + getConsumptionsTotal()
     }
-
-    fun getFormattedTotal(): String {
-        return java.text.NumberFormat
-            .getCurrencyInstance(java.util.Locale("pt", "BR"))
-            .format(getTotalValue())
-    }
 }

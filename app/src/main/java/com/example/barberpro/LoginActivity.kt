@@ -92,7 +92,7 @@ class LoginActivity : AppCompatActivity() {
     private fun validateInputs(email: String, password: String): Boolean {
         var isValid = true
 
-        // Validate email
+        // Validar email
         if (email.isEmpty()) {
             emailInputLayout.error = "Por favor, insira seu e-mail ou usuário"
             isValid = false
@@ -100,7 +100,7 @@ class LoginActivity : AppCompatActivity() {
             emailInputLayout.error = null
         }
 
-        // Validate password
+        // Validar senha
         if (password.isEmpty()) {
             passwordInputLayout.error = "Por favor, insira sua senha"
             isValid = false

@@ -6,16 +6,18 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.barberpro.model.Subscription
 import com.example.barberpro.model.SubscriptionStatus
 import com.example.barberpro.repository.SubscriptionRepository
+import com.example.barberpro.util.CurrencyUtils
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
-class SubscriptionManagementActivity : BaseActivity() {
+class SubscriptionManagementActivity : AppCompatActivity() {
 
     private lateinit var backButton: ImageView
     private lateinit var planBadgeText: TextView
@@ -135,7 +137,12 @@ class SubscriptionManagementActivity : BaseActivity() {
             planBadgeText.setTextColor(android.graphics.Color.parseColor("#D4AF37"))
         }
 
-        planPriceText.text = subscription.plan.getFormattedPrice()
+        planPriceText.text = if (subscription.plan.price == 0.0) {
+            "Gratuito"
+        } else {
+            CurrencyUtils.format(subscription.plan.price)
+        }
+
         planDurationText.text = if (subscription.isTrial()) {
             "${subscription.getDaysRemaining()} dias restantes"
         } else {

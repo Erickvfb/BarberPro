@@ -1,6 +1,5 @@
 package com.example.barberpro.repository
 
-import com.example.barberpro.model.ProductCategory
 import com.example.barberpro.model.ProductType
 import com.example.barberpro.model.StockProducts
 import kotlinx.coroutines.Dispatchers

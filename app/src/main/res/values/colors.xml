@@ -40,5 +40,17 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <color name="chip_background">#3B82F6</color>
+    <!-- Badge Popular -->
+    <color name="badge_popular_bg">#3B2667</color>
+    <color name="badge_popular_text">#A78BFA</color>
+
+    <!-- Badge Disponível -->
+    <color name="badge_disponivel_bg">#1E3A5F</color>
+    <color name="badge_disponivel_text">#60A5FA</color>
+
+    <!-- Badge Econômico -->
+    <color name="badge_economico_bg">#064E3B</color>
+    <color name="badge_economico_text">#34D399</color>
 
 </resources>

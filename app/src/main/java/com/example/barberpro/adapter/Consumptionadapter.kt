@@ -63,7 +63,7 @@ class ConsumptionAdapter(
             priceText.text = currencyFormat.format(item.getTotal())
 
             removeButton.setOnClickListener {
-                onRemoveItem(item)  // ✅ CORREÇÃO: Chama o callback com o item
+                onRemoveItem(item)  //Chama o callback com o item
             }
         }
     }

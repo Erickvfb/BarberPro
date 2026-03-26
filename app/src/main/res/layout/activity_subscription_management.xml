@@ -57,7 +57,6 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Badge do Plano -->
                 <TextView
                     android:id="@+id/planBadgeText"
                     android:layout_width="wrap_content"
@@ -66,12 +65,11 @@
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:textColor="@color/gold"
-                    android:background="@drawable/bg_circle_border_gold"
+                    android:background="@drawable/bg_badge_gold"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="4dp"
                     android:layout_marginBottom="12dp" />
 
-                <!-- Preço -->
                 <TextView
                     android:id="@+id/planPriceText"
                     android:layout_width="wrap_content"
@@ -90,14 +88,12 @@
                     android:textColor="@color/text_secondary"
                     android:layout_marginBottom="16dp" />
 
-                <!-- Divider -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="#2A2A2A"
                     android:layout_marginVertical="12dp" />
 
-                <!-- Info da Assinatura -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -147,6 +143,7 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/paymentMethodRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
@@ -209,7 +206,55 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Botões de Ação -->
+        <!-- Card de Upgrade -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/upgradeCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="#1A2415"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="2dp"
+            app:strokeColor="@color/gold">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⭐ Faça Upgrade!"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/gold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Torne-se membro mensal por R$ 29,90/mês e tenha acesso ilimitado!"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/white"
+                    android:layout_marginBottom="12dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/upgradeButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="FAZER UPGRADE AGORA"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="8dp"
+                    app:backgroundTint="@color/gold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Gerenciar -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -250,47 +295,6 @@
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
                     android:text="Alterar método de pagamento"
-                    android:textSize="15sp"
-                    android:textColor="@android:color/white" />
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="@color/text_secondary" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Alterar Plano -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/changePlanCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:cardBackgroundColor="@color/card_background"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_star"
-                    app:tint="@color/gold" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:text="Alterar plano"
                     android:textSize="15sp"
                     android:textColor="@android:color/white" />
 

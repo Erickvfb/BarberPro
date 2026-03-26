@@ -1,36 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme -->
+<resources>
+
+    <!-- ========================= -->
+    <!-- TEMA PRINCIPAL DO APP -->
+    <!-- ========================= -->
     <style name="Theme.BarberPro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color -->
+        <!-- Primary -->
         <item name="colorPrimary">@color/gold</item>
         <item name="colorPrimaryVariant">@color/gold_dark</item>
         <item name="colorOnPrimary">@color/button_text</item>
 
-        <!-- Secondary brand color -->
+        <!-- Secondary -->
         <item name="colorSecondary">@color/gold_light</item>
         <item name="colorSecondaryVariant">@color/gold_dark</item>
         <item name="colorOnSecondary">@color/button_text</item>
 
-        <!-- Status bar color -->
+        <!-- Status bar -->
         <item name="android:statusBarColor">@color/background_dark</item>
         <item name="android:windowLightStatusBar">false</item>
 
-        <!-- Background colors -->
+        <!-- Background -->
         <item name="android:windowBackground">@color/background_dark</item>
         <item name="backgroundColor">@color/background_dark</item>
 
-        <!-- Text colors -->
+        <!-- Text -->
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="android:textColorHint">@color/text_hint</item>
 
-        <!-- Material Components styles -->
+        <!-- Components -->
         <item name="materialButtonStyle">@style/Widget.BarberPro.Button</item>
         <item name="textInputStyle">@style/Widget.BarberPro.TextInputLayout</item>
     </style>
 
-    <!-- Button Style -->
+    <!-- ========================= -->
+    <!-- BOTÃO -->
+    <!-- ========================= -->
     <style name="Widget.BarberPro.Button" parent="Widget.MaterialComponents.Button">
         <item name="cornerRadius">8dp</item>
         <item name="android:textAllCaps">false</item>
@@ -39,11 +44,87 @@
         <item name="elevation">0dp</item>
     </style>
 
-    <!-- TextInputLayout Style -->
-    <style name="Widget.BarberPro.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+    <!-- ========================= -->
+    <!-- TEXT INPUT -->
+    <!-- ========================= -->
+    <style name="Widget.BarberPro.TextInputLayout"
+        parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">@color/input_stroke</item>
         <item name="boxStrokeWidth">1dp</item>
         <item name="hintTextColor">@color/text_secondary</item>
         <item name="android:textColorHint">@color/text_hint</item>
     </style>
+
+    <!-- ========================= -->
+    <!-- CALENDÁRIO (MaterialDatePicker) -->
+    <!-- ========================= -->
+    <style name="ThemeOverlay.BarberPro.MaterialCalendar"
+        parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+
+        <!-- Cores primárias -->
+        <item name="colorPrimary">@color/gold</item>
+        <item name="colorOnPrimary">@color/button_text</item>
+
+        <!-- Superfície (fundo do calendário) -->
+        <item name="colorSurface">@color/background_dark</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+
+        <!-- ✅ CORRETO: Sem @style/ dentro do item -->
+        <item name="materialCalendarStyle">@style/BarberPro.Calendar</item>
+        <item name="materialCalendarHeaderTitle">@style/BarberPro.Calendar.HeaderTitle</item>
+        <item name="materialCalendarHeaderSelection">@style/BarberPro.Calendar.HeaderSelection</item>
+    </style>
+
+    <!-- ========================= -->
+    <!-- CALENDÁRIO BASE -->
+    <!-- ========================= -->
+    <style name="BarberPro.Calendar" parent="Widget.MaterialComponents.MaterialCalendar">
+        <item name="dayStyle">@style/BarberPro.Calendar.Day</item>
+        <item name="dayTodayStyle">@style/BarberPro.Calendar.Today</item>
+        <item name="daySelectedStyle">@style/BarberPro.Calendar.Selected</item>
+    </style>
+
+    <!-- ========================= -->
+    <!-- DIA NORMAL -->
+    <!-- ========================= -->
+    <style name="BarberPro.Calendar.Day"
+        parent="Widget.MaterialComponents.MaterialCalendar.Day">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- ========================= -->
+    <!-- DIA DE HOJE -->
+    <!-- ========================= -->
+    <style name="BarberPro.Calendar.Today"
+        parent="Widget.MaterialComponents.MaterialCalendar.Day.Today">
+        <item name="android:textColor">@color/gold</item>
+        <item name="strokeColor">@color/gold</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- ========================= -->
+    <!-- DIA SELECIONADO -->
+    <!-- ========================= -->
+    <style name="BarberPro.Calendar.Selected"
+        parent="Widget.MaterialComponents.MaterialCalendar.Day.Selected">
+        <item name="android:textColor">@color/button_text</item>
+        <item name="itemFillColor">@color/gold</item>
+    </style>
+
+    <!-- ========================= -->
+    <!-- TÍTULO DO HEADER -->
+    <!-- ========================= -->
+    <style name="BarberPro.Calendar.HeaderTitle"
+        parent="Widget.MaterialComponents.MaterialCalendar.HeaderTitle">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- ========================= -->
+    <!-- SELEÇÃO DO HEADER -->
+    <!-- ========================= -->
+    <style name="BarberPro.Calendar.HeaderSelection"
+        parent="Widget.MaterialComponents.MaterialCalendar.HeaderSelection">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
 </resources>

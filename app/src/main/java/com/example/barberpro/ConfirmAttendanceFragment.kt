@@ -18,6 +18,7 @@ import com.example.barberpro.model.*
 import com.example.barberpro.model.com.example.barberpro.adapter.ProductSelectionAdapter
 import com.example.barberpro.repository.ProductsRepository
 import com.example.barberpro.repository.ServicesRepository
+import com.example.barberpro.util.CurrencyUtils
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -476,7 +477,7 @@ class ConfirmAttendanceFragment : Fragment() {
             append("Atendimento registrado!\n\n")
             append("Cliente: ${record.clientName}\n")
             append("Serviço: ${record.serviceName}\n")
-            append("Valor: ${currencyFormat.format(record.servicePrice)}\n")
+            append("Valor: ${CurrencyUtils.format(record.servicePrice)}\n")  // ✅
 
             if (hasConsumptions) {
                 append("\n━━━━━━━━━━━━━━━━━━\n")
@@ -484,12 +485,12 @@ class ConfirmAttendanceFragment : Fragment() {
                 append("━━━━━━━━━━━━━━━━━━\n\n")
                 consumptions.forEach { item ->
                     append("• ${item.name}\n")
-                    append("  ${currencyFormat.format(item.unitPrice * item.quantity)}\n\n")
+                    append("  ${CurrencyUtils.format(item.unitPrice * item.quantity)}\n\n")  // ✅
                 }
             }
 
             append("━━━━━━━━━━━━━━━━━━\n")
-            append("TOTAL: ${record.getFormattedTotal()}\n")
+            append("TOTAL: ${CurrencyUtils.format(record.getTotalValue())}\n")  // ✅
             append("━━━━━━━━━━━━━━━━━━")
         }
 

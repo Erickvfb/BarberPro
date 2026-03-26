@@ -22,12 +22,10 @@ import kotlinx.coroutines.launch
 class ProfileFragment : Fragment() {
 
     private lateinit var backButton: ImageView
-    private lateinit var cameraButton: MaterialCardView
     private lateinit var barbeariaNomeText: TextView
     private lateinit var nomeCompletoText: TextView
     private lateinit var emailText: TextView
     private lateinit var telefoneText: TextView
-    private lateinit var especialidadeText: TextView
     private lateinit var changePasswordCard: MaterialCardView
     private lateinit var logoutButton: MaterialButton
     private lateinit var subscriptionCard: MaterialCardView
@@ -53,12 +51,10 @@ class ProfileFragment : Fragment() {
 
     private fun initializeViews(view: View) {
         backButton = view.findViewById(R.id.backButton)
-        cameraButton = view.findViewById(R.id.cameraButton)
         barbeariaNomeText = view.findViewById(R.id.barbeariaNomeText)
         nomeCompletoText = view.findViewById(R.id.nomeCompletoText)
         emailText = view.findViewById(R.id.emailText)
         telefoneText = view.findViewById(R.id.telefoneText)
-        especialidadeText = view.findViewById(R.id.especialidadeText)
         changePasswordCard = view.findViewById(R.id.changePasswordCard)
         logoutButton = view.findViewById(R.id.logoutButton)
         subscriptionCard = view.findViewById(R.id.subscriptionCard)
@@ -70,14 +66,9 @@ class ProfileFragment : Fragment() {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
 
-        cameraButton.setOnClickListener {
-            changeProfilePhoto()
-        }
-
         subscriptionCard.setOnClickListener {
-            startActivity(
-                Intent(requireContext(), SubscriptionManagementActivity::class.java)
-            )
+            val intent = Intent(requireContext(), SubscriptionManagementActivity::class.java)
+            startActivity(intent)
         }
 
         requireView().findViewById<ImageView>(R.id.editBarbeariaButton).setOnClickListener {
@@ -120,16 +111,6 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        requireView().findViewById<ImageView>(R.id.editEspecialidadeButton).setOnClickListener {
-            showEditDialog(
-                "Especialidade",
-                especialidadeText.text.toString()
-            ) { newValue ->
-                especialidadeText.text = newValue
-                updateProfile()
-            }
-        }
-
         changePasswordCard.setOnClickListener {
             showChangePasswordDialog()
         }
@@ -163,7 +144,6 @@ class ProfileFragment : Fragment() {
         nomeCompletoText.text = profile.nomeCompleto
         emailText.text = profile.email
         telefoneText.text = formatPhone(profile.telefone)
-        especialidadeText.text = profile.especialidade
     }
 
     private fun showEditDialog(
@@ -197,8 +177,6 @@ class ProfileFragment : Fragment() {
             nomeCompleto = nomeCompletoText.text.toString(),
             email = emailText.text.toString(),
             telefone = telefoneText.text.toString().replace(Regex("[^0-9]"), ""),
-            especialidade = especialidadeText.text.toString(),
-            photoUrl = currentProfile?.photoUrl
         )
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -221,14 +199,6 @@ class ProfileFragment : Fragment() {
                 ).show()
             }
         }
-    }
-
-    private fun changeProfilePhoto() {
-        Toast.makeText(
-            requireContext(),
-            "Seleção de foto em desenvolvimento",
-            Toast.LENGTH_SHORT
-        ).show()
     }
 
     private fun showChangePasswordDialog() {

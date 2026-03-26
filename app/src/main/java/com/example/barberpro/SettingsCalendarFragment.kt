@@ -8,9 +8,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
+import com.example.barberpro.model.BarberConfig
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import java.util.*
@@ -61,7 +63,10 @@ class SettingsCalendarFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
         initializeViews(view)
+        loadConfig()
         setupClickListeners()
     }
 
@@ -85,9 +90,19 @@ class SettingsCalendarFragment : Fragment() {
         tercaHorarioText = view.findViewById(R.id.tercaHorarioText)
         quartaHorarioText = view.findViewById(R.id.quartaHorarioText)
         quintaHorarioText = view.findViewById(R.id.quintaHorarioText)
-        sextaHorarioText = view.findViewById(R.id.SextaHorarioText)
+        sextaHorarioText = view.findViewById(R.id.sextaHorarioText)
         sabadoHorarioText = view.findViewById(R.id.sabadoHorarioText)
         domingoHorarioText = view.findViewById(R.id.domingoHorarioText)
+    }
+
+    private fun loadConfig() {
+        val config = BarberConfig.getInstance()
+
+        almocoSwitch.isChecked = config.hasLunchBreak
+        almocoInicioText.text = String.format("%02d:%02d", config.lunchStartHour, config.lunchStartMinute)
+        almocoFimText.text = String.format("%02d:%02d", config.lunchEndHour, config.lunchEndMinute)
+
+        updateLunchCardsState(config.hasLunchBreak)
     }
 
     private fun setupClickListeners() {
@@ -95,15 +110,24 @@ class SettingsCalendarFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
+        almocoSwitch.setOnCheckedChangeListener { _, isChecked ->
+            updateLunchCardsState(isChecked)
+            salvarConfiguracao()
+        }
+
         almocoInicioCard.setOnClickListener {
-            selecionarHorario { hora, minuto ->
+            val config = BarberConfig.getInstance()
+            selecionarHorario(config.lunchStartHour, config.lunchStartMinute) { hora, minuto ->
                 almocoInicioText.text = String.format("%02d:%02d", hora, minuto)
+                salvarConfiguracao()
             }
         }
 
         almocoFimCard.setOnClickListener {
-            selecionarHorario { hora, minuto ->
+            val config = BarberConfig.getInstance()
+            selecionarHorario(config.lunchEndHour, config.lunchEndMinute) { hora, minuto ->
                 almocoFimText.text = String.format("%02d:%02d", hora, minuto)
+                salvarConfiguracao()
             }
         }
 
@@ -114,6 +138,59 @@ class SettingsCalendarFragment : Fragment() {
         sextaCard.setOnClickListener { mostrarDialogHorario("Sexta-feira", sextaHorarioText) }
         sabadoCard.setOnClickListener { mostrarDialogHorario("Sábado", sabadoHorarioText) }
         domingoCard.setOnClickListener { mostrarDialogHorario("Domingo", domingoHorarioText) }
+    }
+
+    private fun updateLunchCardsState(enabled: Boolean) {
+        almocoInicioCard.isEnabled = enabled
+        almocoFimCard.isEnabled = enabled
+        almocoInicioCard.alpha = if (enabled) 1.0f else 0.5f
+        almocoFimCard.alpha = if (enabled) 1.0f else 0.5f
+    }
+
+    // VALIDAÇÃO: Verifica se horário fim é maior que início
+    private fun salvarConfiguracao() {
+        val inicioText = almocoInicioText.text.toString().split(":")
+        val fimText = almocoFimText.text.toString().split(":")
+
+        val inicioHora = inicioText[0].toInt()
+        val inicioMinuto = inicioText[1].toInt()
+        val fimHora = fimText[0].toInt()
+        val fimMinuto = fimText[1].toInt()
+
+        // Converte para minutos para comparar
+        val inicioEmMinutos = inicioHora * 60 + inicioMinuto
+        val fimEmMinutos = fimHora * 60 + fimMinuto
+
+        // VALIDAÇÃO: Fim deve ser maior que início
+        if (fimEmMinutos <= inicioEmMinutos) {
+            Toast.makeText(
+                requireContext(),
+                "❌ Horário final deve ser maior que o inicial!",
+                Toast.LENGTH_LONG
+            ).show()
+
+            // Reverte para valores anteriores
+            val config = BarberConfig.getInstance()
+            almocoInicioText.text = String.format("%02d:%02d", config.lunchStartHour, config.lunchStartMinute)
+            almocoFimText.text = String.format("%02d:%02d", config.lunchEndHour, config.lunchEndMinute)
+            return
+        }
+
+        val config = BarberConfig(
+            hasLunchBreak = almocoSwitch.isChecked,
+            lunchStartHour = inicioHora,
+            lunchStartMinute = inicioMinuto,
+            lunchEndHour = fimHora,
+            lunchEndMinute = fimMinuto
+        )
+
+        BarberConfig.updateInstance(config)
+
+        Toast.makeText(
+            requireContext(),
+            "Configuração salva automaticamente",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     private fun mostrarDialogHorario(dia: String, textView: TextView) {
@@ -139,31 +216,73 @@ class SettingsCalendarFragment : Fragment() {
             fechadoCheckIcon.visibility = if (isFechado) View.VISIBLE else View.GONE
         }
 
+        inicioTimeText.setOnClickListener {
+            val horaMin = inicioTimeText.text.toString().split(":")
+            val hora = horaMin[0].toInt()
+            val minuto = horaMin[1].toInt()
+
+            selecionarHorario(hora, minuto) { h, m ->
+                inicioTimeText.text = String.format("%02d:%02d", h, m)
+            }
+        }
+
+        fimTimeText.setOnClickListener {
+            val horaMin = fimTimeText.text.toString().split(":")
+            val hora = horaMin[0].toInt()
+            val minuto = horaMin[1].toInt()
+
+            selecionarHorario(hora, minuto) { h, m ->
+                fimTimeText.text = String.format("%02d:%02d", h, m)
+            }
+        }
+
         salvarButton.setOnClickListener {
             if (isFechado) {
                 horarios[dia] = Pair("Fechado", "Fechado")
                 textView.text = "Fechado"
                 textView.setTextColor(Color.RED)
-            } else {
-                val inicio = inicioTimeText.text.toString()
-                val fim = fimTimeText.text.toString()
-                horarios[dia] = Pair(inicio, fim)
-                textView.text = "$inicio - $fim"
-                textView.setTextColor(Color.GRAY)
+                dialog.dismiss()
+                return@setOnClickListener
             }
+
+            val inicio = inicioTimeText.text.toString()
+            val fim = fimTimeText.text.toString()
+
+            val inicioSplit = inicio.split(":")
+            val fimSplit = fim.split(":")
+
+            val inicioMin = inicioSplit[0].toInt() * 60 + inicioSplit[1].toInt()
+            val fimMin = fimSplit[0].toInt() * 60 + fimSplit[1].toInt()
+
+            if (fimMin <= inicioMin) {
+                Toast.makeText(
+                    requireContext(),
+                    "❌ O horário final deve ser maior que o inicial!",
+                    Toast.LENGTH_LONG
+                ).show()
+                return@setOnClickListener
+            }
+
+            horarios[dia] = Pair(inicio, fim)
+            textView.text = "$inicio - $fim"
+            textView.setTextColor(Color.GRAY)
+
             dialog.dismiss()
         }
 
         dialog.show()
     }
 
-    private fun selecionarHorario(callback: (Int, Int) -> Unit) {
-        val cal = Calendar.getInstance()
+    private fun selecionarHorario(
+        currentHour: Int,
+        currentMinute: Int,
+        callback: (Int, Int) -> Unit
+    ) {
         TimePickerDialog(
             requireContext(),
             { _, h, m -> callback(h, m) },
-            cal.get(Calendar.HOUR_OF_DAY),
-            cal.get(Calendar.MINUTE),
+            currentHour,
+            currentMinute,
             true
         ).show()
     }

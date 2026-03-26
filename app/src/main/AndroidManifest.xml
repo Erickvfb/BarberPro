@@ -12,7 +12,51 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BarberPro"
         tools:targetApi="31">
-
+        <activity
+            android:name=".MainContainerActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SubscriptionManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EditClientActivity"
+            android:exported="false" />
+        <activity
+            android:name=".NewClientActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ClientProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EditProductActivity"
+            android:exported="false" />
+        <activity
+            android:name=".NewProductActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ProductsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".NewServicesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ServicesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SettingsCalendarActivity"
+            android:exported="false" />
+        <activity
+            android:name=".NewScheduleActivity"
+            android:exported="false" />
+        <activity
+            android:name=".NewPasswordActivity"
+            android:exported="false" />
+        <activity
+            android:name=".RecoverPasswordActivity"
+            android:exported="false" />
+        <activity
+            android:name=".RegisterBarberActivity"
+            android:exported="false" />
         <activity
             android:name=".LoginActivity"
             android:exported="true">
@@ -22,12 +66,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".RegisterBarber"
-            android:exported="false" />
-        <activity
-            android:name=".MainActivity"
-            android:exported="true" />
+
     </application>
 
 </manifest>

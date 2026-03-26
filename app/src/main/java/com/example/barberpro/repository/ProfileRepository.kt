@@ -16,9 +16,7 @@ class ProfileRepository {
         barbeariaNome = "Vintage Barber Shop",
         nomeCompleto = "Ricardo Oliveira",
         email = "ricardo.barber@email.com",
-        telefone = "11987654321",
-        especialidade = "Corte Moderno & Barba",
-        photoUrl = null
+        telefone = "11987654321"
     )
 
     /**
@@ -41,20 +39,6 @@ class ProfileRepository {
             delay(600)
             currentProfile = profile
             Result.success(profile)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Upload profile photo
-     */
-    suspend fun uploadProfilePhoto(photoUri: String): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            delay(1000) // Simulate upload
-            val photoUrl = "https://example.com/photos/${System.currentTimeMillis()}.jpg"
-            currentProfile = currentProfile.copy(photoUrl = photoUrl)
-            Result.success(photoUrl)
         } catch (e: Exception) {
             Result.failure(e)
         }

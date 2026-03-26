@@ -82,7 +82,6 @@ class HomeFragment : Fragment() {
         appointmentsRecyclerView.adapter = agendaAdapter
     }
 
-    // ✅ ADICIONADO: Método de confirmação de exclusão
     private fun deleteAppointment(appointment: Appointment) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Cancelar Agendamento")

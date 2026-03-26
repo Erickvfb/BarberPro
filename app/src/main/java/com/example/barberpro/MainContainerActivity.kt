@@ -5,7 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
-class MainContainerActivity : AppCompatActivity() {
+open class MainContainerActivity : AppCompatActivity() {
 
     private lateinit var bottomNavigation: BottomNavigationView
 
