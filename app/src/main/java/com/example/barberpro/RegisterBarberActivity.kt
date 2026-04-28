@@ -2,13 +2,18 @@ package com.example.barberpro
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.example.barberpro.data.api.ApiClient
+import com.example.barberpro.data.api.RegisterRequest
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import kotlinx.coroutines.launch
 
 class RegisterBarberActivity : AppCompatActivity() {
 
@@ -56,7 +61,6 @@ class RegisterBarberActivity : AppCompatActivity() {
         }
 
         loginLink.setOnClickListener {
-            // Voltar para login
             finish()
         }
     }
@@ -67,26 +71,67 @@ class RegisterBarberActivity : AppCompatActivity() {
         val email = emailInput.text.toString().trim()
         val senha = senhaInput.text.toString()
 
-        // Validações
-        if (!validateInputs(barbeariaNome, nome, email, senha)) {
-            return
-        }
+        val phoneInputText = ""
 
-        // Mostrar loading
+        //limpa e trata telefone
+        val phoneLimpo = phoneInputText.replace(Regex("[^\\d]"), "")
+
+        val phoneFinal = if (phoneLimpo.isEmpty()) null else phoneLimpo
+
+        if (!validateInputs(barbeariaNome, nome, email, senha)) return
+
         cadastrarButton.isEnabled = false
         cadastrarButton.text = "Criando conta..."
 
-        // TODO: Implementar cadastro real (API/Firebase)
-        // Simulação de cadastro
-        cadastrarButton.postDelayed({
-            Toast.makeText(this, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
+        val request = RegisterRequest(
+            email = email,
+            password = senha,
+            full_name = nome,
+            barbershop_name = barbeariaNome,
+            phone = phoneFinal //pode ser null
+        )
 
-            // Navegar para MainActivity ou Login
-            val intent = Intent(this, LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        }, 1500)
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.apiService.register(request)
+
+                if (response.isSuccessful) {
+                    val body = response.body()
+
+                    Toast.makeText(
+                        this@RegisterBarberActivity,
+                        body?.message ?: "Conta criada com sucesso!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    startActivity(Intent(this@RegisterBarberActivity, LoginActivity::class.java))
+                    finish()
+
+                } else {
+                    val error = response.errorBody()?.string()
+                    Log.e("REGISTER_ERROR", error ?: "Erro desconhecido")
+
+                    Toast.makeText(
+                        this@RegisterBarberActivity,
+                        error ?: "Erro ao cadastrar",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
+            } catch (e: Exception) {
+                Log.e("REGISTER_EXCEPTION", e.message ?: "Erro")
+
+                Toast.makeText(
+                    this@RegisterBarberActivity,
+                    "Erro: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+
+            } finally {
+                cadastrarButton.isEnabled = true
+                cadastrarButton.text = "Criar conta"
+            }
+        }
     }
 
     private fun validateInputs(
@@ -97,48 +142,32 @@ class RegisterBarberActivity : AppCompatActivity() {
     ): Boolean {
         var isValid = true
 
-        // Validar nome da barbearia
         if (barbeariaNome.isEmpty()) {
             barbeariaNomeLayout.error = "Digite o nome da barbearia"
             isValid = false
-        } else {
-            barbeariaNomeLayout.error = null
-        }
+        } else barbeariaNomeLayout.error = null
 
-        // Validar nome
         if (nome.isEmpty()) {
             nomeLayout.error = "Digite seu nome completo"
             isValid = false
-        } else {
-            nomeLayout.error = null
-        }
+        } else nomeLayout.error = null
 
-        // Validar email
         if (email.isEmpty()) {
             emailLayout.error = "Digite seu e-mail"
             isValid = false
-        } else if (!isValidEmail(email)) {
+        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             emailLayout.error = "E-mail inválido"
             isValid = false
-        } else {
-            emailLayout.error = null
-        }
+        } else emailLayout.error = null
 
-        // Validar senha
         if (senha.isEmpty()) {
             senhaLayout.error = "Digite sua senha"
             isValid = false
         } else if (senha.length < 8) {
-            senhaLayout.error = "A senha deve ter no mínimo 8 caracteres"
+            senhaLayout.error = "Mínimo 8 caracteres"
             isValid = false
-        } else {
-            senhaLayout.error = null
-        }
+        } else senhaLayout.error = null
 
         return isValid
-    }
-
-    private fun isValidEmail(email: String): Boolean {
-        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 }

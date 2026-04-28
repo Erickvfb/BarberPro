@@ -1,14 +1,18 @@
 package com.example.barberpro
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.example.barberpro.repository.AuthRepository
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import android.widget.TextView
-import android.content.Intent
+import kotlinx.coroutines.launch
+import java.io.IOException
 
 class LoginActivity : AppCompatActivity() {
 
@@ -21,6 +25,9 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var loginButton: MaterialButton
     private lateinit var forgotPasswordText: TextView
     private lateinit var signUpText: TextView
+
+    // Repository
+    private val authRepository = AuthRepository.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,73 +52,122 @@ class LoginActivity : AppCompatActivity() {
     private fun setupToolbar() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setDisplayShowHomeEnabled(true)
 
         toolbar.setNavigationOnClickListener {
-            onBackPressed()
+            onBackPressedDispatcher.onBackPressed()
         }
     }
 
     private fun setupClickListeners() {
-        // Login button click
+
         loginButton.setOnClickListener {
             performLogin()
         }
 
-        // Forgot password click
         forgotPasswordText.setOnClickListener {
             navigateToForgotPassword()
         }
 
-        // Sign up click
         signUpText.setOnClickListener {
             navigateToSignUp()
         }
     }
 
     private fun performLogin() {
-        val email = emailEditText.text.toString().trim()
-        val password = passwordEditText.text.toString().trim()
+        val email = emailEditText.text?.toString()?.trim() ?: ""
+        val password = passwordEditText.text?.toString()?.trim() ?: ""
 
-        if (!validateInputs(email, password)) {
-            return
+        if (!validateInputs(email, password)) return
+
+        setLoadingState(true)
+
+        lifecycleScope.launch {
+            try {
+                val result = authRepository.login(email, password)
+
+                result.onSuccess {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Login realizado com sucesso!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    navigateToMain()
+                }
+
+                result.onFailure { error ->
+                    setLoadingState(false)
+
+                    val errorMessage = when {
+                        error is IOException ->
+                            "Sem conexão com a internet."
+                        error.message?.contains("401", true) == true ->
+                            "Email ou senha incorretos."
+                        error.message?.contains("timeout", true) == true ->
+                            "Servidor demorou para responder."
+                        else ->
+                            error.message ?: "Erro ao fazer login."
+                    }
+
+                    Toast.makeText(
+                        this@LoginActivity,
+                        errorMessage,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
+            } catch (e: Exception) {
+                setLoadingState(false)
+
+                Toast.makeText(
+                    this@LoginActivity,
+                    "Erro inesperado: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
-
-        loginButton.isEnabled = false
-        loginButton.text = "Entrando..."
-
-        loginButton.postDelayed({
-
-            val intent = Intent(this, MainContainerActivity::class.java)
-            startActivity(intent)
-            finish()
-
-        }, 1500)
     }
 
     private fun validateInputs(email: String, password: String): Boolean {
         var isValid = true
 
-        // Validar email
+        // Email
         if (email.isEmpty()) {
-            emailInputLayout.error = "Por favor, insira seu e-mail ou usuário"
+            emailInputLayout.error = "Informe seu e-mail"
+            isValid = false
+        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            emailInputLayout.error = "E-mail inválido"
             isValid = false
         } else {
             emailInputLayout.error = null
         }
 
-        // Validar senha
+        // Senha
         if (password.isEmpty()) {
-            passwordInputLayout.error = "Por favor, insira sua senha"
+            passwordInputLayout.error = "Informe sua senha"
             isValid = false
-        } else if (password.length < 6) {
-            passwordInputLayout.error = "A senha deve ter no mínimo 6 caracteres"
+        } else if (password.length < 8) {
+            passwordInputLayout.error = "Mínimo de 8 caracteres"
             isValid = false
         } else {
             passwordInputLayout.error = null
         }
 
         return isValid
+    }
+
+    private fun setLoadingState(isLoading: Boolean) {
+        loginButton.isEnabled = !isLoading
+        emailEditText.isEnabled = !isLoading
+        passwordEditText.isEnabled = !isLoading
+
+        loginButton.text = if (isLoading) "Entrando..." else "Entrar"
+    }
+
+    private fun navigateToMain() {
+        val intent = Intent(this, MainContainerActivity::class.java)
+        startActivity(intent)
+        finish()
     }
 
     private fun navigateToForgotPassword() {
@@ -125,7 +181,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
+        onBackPressedDispatcher.onBackPressed()
         return true
     }
 }
