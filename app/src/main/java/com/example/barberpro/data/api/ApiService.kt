@@ -19,11 +19,12 @@ interface ApiService {
     @GET("auth/me")
     suspend fun getProfile(): Response<ApiResponse<User>>
 
+    @PUT("auth/me")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ApiResponse<User>>
+
     // CLIENTS
-    @GET("clients")
-    suspend fun getClients(
-        @Query("search") search: String? = null
-    ): Response<ApiResponse<List<Client>>>
+    @GET("clients") suspend fun getClients(
+        @Query("search") search: String? = null): Response<ApiResponse<List<Client>>>
 
     @GET("clients/{id}")
     suspend fun getClient(@Path("id") id: String): Response<ApiResponse<Client>>
@@ -31,11 +32,7 @@ interface ApiService {
     @POST("clients")
     suspend fun createClient(@Body client: ClientRequest): Response<ApiResponse<Client>>
 
-    @PUT("clients/{id}")
-    suspend fun updateClient(
-        @Path("id") id: String,
-        @Body client: ClientRequest
-    ): Response<ApiResponse<Client>>
+    @PUT("clients/{id}") suspend fun updateClient(@Path("id") id: String, @Body client: ClientRequest): Response<ApiResponse<Client>>
 
     @DELETE("clients/{id}")
     suspend fun deleteClient(@Path("id") id: String): Response<MessageResponse>
@@ -47,6 +44,11 @@ interface ApiService {
     // SERVICES
     @GET("services")
     suspend fun getServices(): Response<ApiResponse<List<Service>>>
+
+    @GET("services/{id}")
+    suspend fun getService(
+        @Path("id") id: String
+    ): Response<ApiResponse<Service>>
 
     @POST("services")
     suspend fun createService(@Body service: ServiceRequest): Response<ApiResponse<Service>>
@@ -106,6 +108,8 @@ interface ApiService {
 
     @DELETE("products/{id}")
     suspend fun deleteProduct(@Path("id") id: String): Response<MessageResponse>
+
+    @GET("products/{id}/has-sales") suspend fun hasProductSales(@Path("id") id: String): Response<ApiResponse<Boolean>>
 
     // CONFIG
     @GET("config")
@@ -174,6 +178,12 @@ data class RegisterRequest(
     val phone: String?
 )
 
+data class UpdateProfileRequest(
+    val full_name: String,
+    val barbershop_name: String,
+    val email: String,
+    val phone: String?
+)
 data class LoginRequest(
     val email: String,
     val password: String
@@ -233,7 +243,7 @@ data class User(
     val email: String,
     val barbershop_name: String,
     val full_name: String,
-    val phone: String
+    val phone: String?
 )
 
 data class AppointmentFull(
