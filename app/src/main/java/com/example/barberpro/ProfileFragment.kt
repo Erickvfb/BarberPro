@@ -1,23 +1,25 @@
 package com.example.barberpro
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.example.barberpro.model.BarberProfile
-import com.example.barberpro.repository.ProfileRepository
+import com.example.barberpro.data.api.RetrofitClient
+import com.example.barberpro.data.api.UpdateProfileRequest
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
+
 
 class ProfileFragment : Fragment() {
 
@@ -30,8 +32,9 @@ class ProfileFragment : Fragment() {
     private lateinit var logoutButton: MaterialButton
     private lateinit var subscriptionCard: MaterialCardView
 
-    private val repository = ProfileRepository.getInstance()
-    private var currentProfile: BarberProfile? = null
+    private lateinit var editBarbeariaButton: ImageView
+    private lateinit var editNomeButton: ImageView
+    private lateinit var editTelefoneButton: ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,9 +58,14 @@ class ProfileFragment : Fragment() {
         nomeCompletoText = view.findViewById(R.id.nomeCompletoText)
         emailText = view.findViewById(R.id.emailText)
         telefoneText = view.findViewById(R.id.telefoneText)
+
         changePasswordCard = view.findViewById(R.id.changePasswordCard)
         logoutButton = view.findViewById(R.id.logoutButton)
         subscriptionCard = view.findViewById(R.id.subscriptionCard)
+
+        editBarbeariaButton = view.findViewById(R.id.editBarbeariaButton)
+        editNomeButton = view.findViewById(R.id.editNomeButton)
+        editTelefoneButton = view.findViewById(R.id.editTelefoneButton)
     }
 
     private fun setupClickListeners() {
@@ -71,156 +79,183 @@ class ProfileFragment : Fragment() {
             startActivity(intent)
         }
 
-        requireView().findViewById<ImageView>(R.id.editBarbeariaButton).setOnClickListener {
-            showEditDialog(
-                "Nome da Barbearia",
-                barbeariaNomeText.text.toString()
-            ) { newValue ->
-                barbeariaNomeText.text = newValue
-                updateProfile()
-            }
-        }
-
-        requireView().findViewById<ImageView>(R.id.editNomeButton).setOnClickListener {
-            showEditDialog(
-                "Nome Completo",
-                nomeCompletoText.text.toString()
-            ) { newValue ->
-                nomeCompletoText.text = newValue
-                updateProfile()
-            }
-        }
-
-        requireView().findViewById<ImageView>(R.id.editEmailButton).setOnClickListener {
-            showEditDialog(
-                "E-mail",
-                emailText.text.toString()
-            ) { newValue ->
-                emailText.text = newValue
-                updateProfile()
-            }
-        }
-
-        requireView().findViewById<ImageView>(R.id.editTelefoneButton).setOnClickListener {
-            showEditDialog(
-                "Telefone",
-                telefoneText.text.toString()
-            ) { newValue ->
-                telefoneText.text = newValue
-                updateProfile()
-            }
+        logoutButton.setOnClickListener {
+            showLogoutDialog()
         }
 
         changePasswordCard.setOnClickListener {
-            showChangePasswordDialog()
+            Toast.makeText(
+                requireContext(),
+                "Funcionalidade em breve",
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
-        logoutButton.setOnClickListener {
-            showLogoutDialog()
+        editBarbeariaButton.setOnClickListener {
+            showEditDialog(
+                "Nome da Barbearia",
+                barbeariaNomeText.text.toString()
+            ) {
+                barbeariaNomeText.text = it
+                updateProfile()
+            }
+        }
+
+        editNomeButton.setOnClickListener {
+            showEditDialog(
+                "Nome Completo",
+                nomeCompletoText.text.toString()
+            ) {
+                nomeCompletoText.text = it
+                updateProfile()
+            }
+        }
+
+
+        editTelefoneButton.setOnClickListener {
+            showEditDialog(
+                "Telefone",
+                telefoneText.text.toString()
+            ) {
+                telefoneText.text = it
+                updateProfile()
+            }
         }
     }
 
     private fun loadProfile() {
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = repository.getProfile()
 
-            result.onSuccess { profile ->
-                currentProfile = profile
-                displayProfile(profile)
-            }
+            try {
 
-            result.onFailure { error ->
-                Toast.makeText(
-                    requireContext(),
-                    "Erro ao carregar perfil: ${error.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                val response = RetrofitClient.apiService.getProfile()
+
+                Log.d("PROFILE_DEBUG", "Code: ${response.code()}")
+                Log.d("PROFILE_DEBUG", "Body: ${response.body()}")
+
+                if (response.isSuccessful) {
+
+                    val user = response.body()?.data
+
+                    if (user != null) {
+
+                        displayProfile(
+                            barbeariaNome = user.barbershop_name,
+                            nomeCompleto = user.full_name,
+                            email = user.email,
+                            telefone = user.phone
+                        )
+
+                    } else {
+                        showError("Usuário não encontrado")
+                    }
+
+                } else {
+                    showError("Erro ${response.code()}")
+                }
+
+            } catch (e: Exception) {
+
+                Log.e("PROFILE_EXCEPTION", e.message ?: "Erro")
+
+                showError("Erro: ${e.message}")
             }
         }
     }
 
-    private fun displayProfile(profile: BarberProfile) {
-        barbeariaNomeText.text = profile.barbeariaNome
-        nomeCompletoText.text = profile.nomeCompleto
-        emailText.text = profile.email
-        telefoneText.text = formatPhone(profile.telefone)
-    }
-
-    private fun showEditDialog(
-        fieldName: String,
-        currentValue: String,
-        onSave: (String) -> Unit
+    private fun displayProfile(
+        barbeariaNome: String,
+        nomeCompleto: String,
+        email: String,
+        telefone: String?
     ) {
-        val dialogView =
-            LayoutInflater.from(requireContext()).inflate(R.layout.dialog_edit_field, null)
 
-        val editText =
-            dialogView.findViewById<TextInputEditText>(R.id.editFieldInput)
+        barbeariaNomeText.text = barbeariaNome
+        nomeCompletoText.text = nomeCompleto
+        emailText.text = email
 
-        editText.setText(currentValue)
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Editar $fieldName")
-            .setView(dialogView)
-            .setPositiveButton("Salvar") { _, _ ->
-                val newValue = editText.text.toString().trim()
-                if (newValue.isNotEmpty()) onSave(newValue)
+        telefoneText.text =
+            if (telefone.isNullOrEmpty()) {
+                "Não informado"
+            } else {
+                formatPhone(telefone)
             }
-            .setNegativeButton("Cancelar", null)
-            .show()
     }
 
     private fun updateProfile() {
-        val updatedProfile = BarberProfile(
-            id = currentProfile?.id ?: "1",
-            barbeariaNome = barbeariaNomeText.text.toString(),
-            nomeCompleto = nomeCompletoText.text.toString(),
-            email = emailText.text.toString(),
-            telefone = telefoneText.text.toString().replace(Regex("[^0-9]"), ""),
-        )
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = repository.updateProfile(updatedProfile)
 
-            result.onSuccess {
+            try {
+
+                val request = UpdateProfileRequest(
+                    full_name = nomeCompletoText.text.toString(),
+                    barbershop_name = barbeariaNomeText.text.toString(),
+                    email = emailText.text.toString(),
+                    phone = telefoneText.text.toString()
+                )
+
+                val response = RetrofitClient.apiService.updateProfile(request)
+
+                if (response.isSuccessful) {
+
+                    Toast.makeText(
+                        requireContext(),
+                        "Perfil atualizado com sucesso!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+
+                    Toast.makeText(
+                        requireContext(),
+                        "Erro ao atualizar perfil",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+            } catch (e: Exception) {
+
                 Toast.makeText(
                     requireContext(),
-                    "Perfil atualizado!",
-                    Toast.LENGTH_SHORT
-                ).show()
-                currentProfile = updatedProfile
-            }
-
-            result.onFailure { error ->
-                Toast.makeText(
-                    requireContext(),
-                    "Erro ao atualizar: ${error.message}",
+                    "Erro: ${e.message}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
         }
     }
 
-    private fun showChangePasswordDialog() {
-        val dialogView =
-            LayoutInflater.from(requireContext())
-                .inflate(R.layout.dialog_change_password, null)
+    private fun showEditDialog(
+        title: String,
+        currentValue: String,
+        onSave: (String) -> Unit
+    ) {
+
+        val input = TextInputEditText(requireContext())
+
+        input.setText(currentValue)
+
+        input.setTextColor(Color.BLACK)
+
+        input.setHintTextColor(Color.GRAY)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Alterar Senha")
-            .setView(dialogView)
-            .setPositiveButton("Alterar") { _, _ ->
-                Toast.makeText(
-                    requireContext(),
-                    "Senha alterada com sucesso!",
-                    Toast.LENGTH_SHORT
-                ).show()
+            .setTitle(title)
+            .setView(input)
+            .setPositiveButton("Salvar") { _, _ ->
+
+                val newValue = input.text.toString().trim()
+
+                if (newValue.isNotEmpty()) {
+                    onSave(newValue)
+                }
             }
             .setNegativeButton("Cancelar", null)
             .show()
     }
 
     private fun showLogoutDialog() {
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Sair da Conta")
             .setMessage("Tem certeza que deseja sair?")
@@ -232,16 +267,31 @@ class ProfileFragment : Fragment() {
     }
 
     private fun performLogout() {
+
+        RetrofitClient.clearToken()
+
         val intent = Intent(requireContext(), LoginActivity::class.java)
+
         intent.flags =
             Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
         startActivity(intent)
+
         requireActivity().finish()
     }
 
+    private fun showError(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
     private fun formatPhone(phone: String): String {
+
         return if (phone.length == 11) {
-            "(${phone.substring(0, 2)}) ${phone.substring(2, 7)}-${phone.substring(7)}"
+
+            "(${phone.substring(0, 2)}) ${
+                phone.substring(2, 7)
+            }-${phone.substring(7)}"
+
         } else {
             phone
         }
