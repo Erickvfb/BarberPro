@@ -1,87 +1,248 @@
 package com.example.barberpro.repository
 
+import com.example.barberpro.data.api.RetrofitClient
+import com.example.barberpro.data.api.ServiceRequest
 import com.example.barberpro.model.Service
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 class ServicesRepository {
 
-    private val services = mutableListOf<Service>()
+    private val apiService = RetrofitClient.apiService
 
-    init {
-        loadMockServices()
-    }
+    // LISTAR SERVIÇOS
+    suspend fun getAllServices(): Result<List<Service>> {
 
-    suspend fun getAllServices(): Result<List<Service>> = withContext(Dispatchers.IO) {
-        try {
-            delay(300)
-            Result.success(services.sortedBy { it.name })
+        return try {
+
+            val response = apiService.getServices()
+
+            if (response.isSuccessful) {
+
+                val services =
+                    response.body()?.data ?: emptyList()
+
+                Result.success(services)
+
+            } else {
+
+                Result.failure(
+                    Exception("Erro ao carregar serviços")
+                )
+            }
+
         } catch (e: Exception) {
+
             Result.failure(e)
         }
     }
 
-    suspend fun getServiceById(id: String): Result<Service> = withContext(Dispatchers.IO) {
-        val service = services.find { it.id == id }
-        if (service != null) Result.success(service)
-        else Result.failure(Exception("Serviço não encontrado"))
-    }
+    // BUSCAR SERVIÇO POR ID
+    suspend fun getServiceById(
+        id: String
+    ): Result<Service> {
 
-    suspend fun addService(service: Service): Result<Service> = withContext(Dispatchers.IO) {
-        services.add(service)
-        Result.success(service)
-    }
+        return try {
 
-    suspend fun updateService(service: Service): Result<Service> = withContext(Dispatchers.IO) {
-        val index = services.indexOfFirst { it.id == service.id }
-        if (index != -1) {
-            services[index] = service
-            Result.success(service)
-        } else {
-            Result.failure(Exception("Serviço não encontrado"))
+            val response = apiService.getService(id)
+
+            if (response.isSuccessful) {
+
+                val service = response.body()?.data
+
+                if (service != null) {
+
+                    Result.success(service)
+
+                } else {
+
+                    Result.failure(
+                        Exception("Serviço não encontrado")
+                    )
+                }
+
+            } else {
+
+                Result.failure(
+                    Exception("Erro ao buscar serviço")
+                )
+            }
+
+        } catch (e: Exception) {
+
+            Result.failure(e)
         }
     }
 
-    suspend fun deleteService(serviceId: String): Result<Boolean> = withContext(Dispatchers.IO) {
-        val removed = services.removeIf { it.id == serviceId }
-        if (removed) Result.success(true)
-        else Result.failure(Exception("Serviço não encontrado"))
+    // CRIAR SERVIÇO
+    suspend fun addService(
+        request: ServiceRequest
+    ): Result<Service> {
+
+        return try {
+
+            val response =
+                apiService.createService(request)
+
+            if (response.isSuccessful) {
+
+                val service =
+                    response.body()?.data
+
+                if (service != null) {
+
+                    Result.success(service)
+
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao criar serviço")
+                    )
+                }
+
+            } else {
+
+                Result.failure(
+                    Exception("Erro ao criar serviço")
+                )
+            }
+
+        } catch (e: Exception) {
+
+            Result.failure(e)
+        }
     }
 
-    // Verifica se o serviço está associado a vendas
-    suspend fun hasServiceInSales(serviceId: String): Boolean = withContext(Dispatchers.IO) {
-        // TODO: Implementar lógica real de vendas
-        false
+    // ATUALIZAR SERVIÇO
+    suspend fun updateService(
+        id: String,
+        request: ServiceRequest
+    ): Result<Service> {
+
+        return try {
+
+            val response =
+                apiService.updateService(id, request)
+
+            if (response.isSuccessful) {
+
+                val service =
+                    response.body()?.data
+
+                if (service != null) {
+
+                    Result.success(service)
+
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao atualizar serviço")
+                    )
+                }
+
+            } else {
+
+                Result.failure(
+                    Exception("Erro ao atualizar serviço")
+                )
+            }
+
+        } catch (e: Exception) {
+
+            Result.failure(e)
+        }
     }
 
-    private fun loadMockServices() {
-        services.addAll(
-            listOf(
-                Service("1", "Corte Social", 45.0),
-                Service("2", "Barba", 30.0),
-                Service("3", "Combo: Corte + Barba", 70.0)
-            )
-        )
+    // EXCLUIR SERVIÇO
+    suspend fun deleteService(
+        serviceId: String
+    ): Result<Boolean> {
+
+        return try {
+
+            val response =
+                apiService.deleteService(serviceId)
+
+            if (response.isSuccessful) {
+
+                Result.success(true)
+
+            } else {
+
+                Result.failure(
+                    Exception("Erro ao excluir serviço")
+                )
+            }
+
+        } catch (e: Exception) {
+
+            Result.failure(e)
+        }
+    }
+
+    // VALIDAÇÃO LOCAL
+    suspend fun hasServiceInSales(
+        serviceId: String
+    ): Boolean {
+
+        return try {
+
+            // futura integração com vendas
+            false
+
+        } catch (e: Exception) {
+
+            true
+        }
+    }
+
+    // PESQUISA
+    suspend fun searchServices(
+        query: String
+    ): Result<List<Service>> {
+
+        return try {
+
+            val response = apiService.getServices()
+
+            if (response.isSuccessful) {
+
+                val services =
+                    response.body()?.data ?: emptyList()
+
+                val filtered =
+                    services.filter {
+                        it.name.contains(
+                            query,
+                            ignoreCase = true
+                        )
+                    }
+
+                Result.success(filtered)
+
+            } else {
+
+                Result.failure(
+                    Exception("Erro ao pesquisar serviços")
+                )
+            }
+
+        } catch (e: Exception) {
+
+            Result.failure(e)
+        }
     }
 
     companion object {
+
         @Volatile
         private var INSTANCE: ServicesRepository? = null
 
-        fun getInstance(): ServicesRepository =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: ServicesRepository().also { INSTANCE = it }
-            }
-    }
+        fun getInstance(): ServicesRepository {
 
-    suspend fun searchServices(query: String): Result<List<Service>> = withContext(Dispatchers.IO) {
-        try {
-            delay(200) // simula algum processamento
-            val filtered = services.filter { it.name.contains(query, ignoreCase = true) }
-            Result.success(filtered)
-        } catch (e: Exception) {
-            Result.failure(e)
+            return INSTANCE ?: synchronized(this) {
+
+                INSTANCE ?: ServicesRepository()
+                    .also { INSTANCE = it }
+            }
         }
     }
 }

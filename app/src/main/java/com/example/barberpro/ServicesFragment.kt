@@ -1,6 +1,5 @@
 package com.example.barberpro.ui.services
 
-import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -30,7 +29,9 @@ class ServicesFragment : Fragment() {
     private lateinit var fabAddServico: FloatingActionButton
 
     private lateinit var servicosAdapter: ServicosAdapter
+
     private val repository = ServicesRepository.getInstance()
+
     private var allServicos = listOf<Service>()
 
     override fun onCreateView(
@@ -38,10 +39,19 @@ class ServicesFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_services, container, false)
+
+        return inflater.inflate(
+            R.layout.fragment_services,
+            container,
+            false
+        )
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?
+    ) {
+
         super.onViewCreated(view, savedInstanceState)
 
         initializeViews(view)
@@ -52,48 +62,90 @@ class ServicesFragment : Fragment() {
     }
 
     private fun initializeViews(view: View) {
-        backButton = view.findViewById(R.id.backButton)
-        searchEditText = view.findViewById(R.id.searchEditText)
-        servicosRecyclerView = view.findViewById(R.id.servicosRecyclerView)
-        fabAddServico = view.findViewById(R.id.fabAddServico)
+
+        backButton =
+            view.findViewById(R.id.backButton)
+
+        searchEditText =
+            view.findViewById(R.id.searchEditText)
+
+        servicosRecyclerView =
+            view.findViewById(R.id.servicosRecyclerView)
+
+        fabAddServico =
+            view.findViewById(R.id.fabAddServico)
     }
 
     private fun setupRecyclerView() {
+
         servicosAdapter = ServicosAdapter(
+
             onServiceClick = { service ->
                 editarServico(service)
             },
+
             onServiceLongClick = { service ->
                 mostrarOpcoes(service)
             }
         )
 
         servicosRecyclerView.apply {
-            layoutManager = LinearLayoutManager(requireContext())
+
+            layoutManager =
+                LinearLayoutManager(requireContext())
+
             adapter = servicosAdapter
         }
     }
 
     private fun setupSearch() {
-        searchEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
-            override fun afterTextChanged(s: Editable?) {
-                filterServicos(s.toString())
+        searchEditText.addTextChangedListener(
+
+            object : TextWatcher {
+
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {}
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {}
+
+                override fun afterTextChanged(
+                    s: Editable?
+                ) {
+
+                    val query =
+                        s.toString().trim()
+
+                    filterServicos(query)
+                }
             }
-        })
+        )
     }
 
     private fun setupClickListeners() {
+
         fabAddServico.setOnClickListener {
+
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewServicesFragment.newInstance())
+                .replace(
+                    R.id.fragmentContainer,
+                    NewServicesFragment.newInstance()
+                )
                 .addToBackStack(null)
                 .commit()
         }
 
         backButton.setOnClickListener {
+
             requireActivity()
                 .onBackPressedDispatcher
                 .onBackPressed()
@@ -101,15 +153,21 @@ class ServicesFragment : Fragment() {
     }
 
     private fun loadServicos() {
+
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = repository.getAllServices()
+
+            val result =
+                repository.getAllServices()
 
             result.onSuccess { servicos ->
+
                 allServicos = servicos
+
                 servicosAdapter.submitList(servicos)
             }
 
             result.onFailure { error ->
+
                 Toast.makeText(
                     requireContext(),
                     "Erro ao carregar serviços: ${error.message}",
@@ -120,19 +178,36 @@ class ServicesFragment : Fragment() {
     }
 
     private fun filterServicos(query: String) {
-        if (query.isEmpty()) {
-            servicosAdapter.submitList(allServicos)
-            return
-        }
 
-        val filtered = allServicos.filter { service ->
-            service.name.contains(query, ignoreCase = true)
-        }
+        viewLifecycleOwner.lifecycleScope.launch {
 
-        servicosAdapter.submitList(filtered)
+            val result = if (query.isNotEmpty()) {
+
+                repository.searchServices(query)
+
+            } else {
+
+                repository.getAllServices()
+            }
+
+            result.onSuccess { services ->
+
+                servicosAdapter.submitList(services)
+            }
+
+            result.onFailure { error ->
+
+                Toast.makeText(
+                    requireContext(),
+                    error.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     private fun editarServico(service: Service) {
+
         parentFragmentManager.beginTransaction()
             .replace(
                 R.id.fragmentContainer,
@@ -143,13 +218,21 @@ class ServicesFragment : Fragment() {
     }
 
     private fun mostrarOpcoes(service: Service) {
-        val opcoes = arrayOf("Editar", "Excluir")
+
+        val opcoes = arrayOf(
+            "Editar",
+            "Excluir"
+        )
 
         AlertDialog.Builder(requireContext())
             .setTitle(service.name)
+
             .setItems(opcoes) { _, which ->
+
                 when (which) {
+
                     0 -> editarServico(service)
+
                     1 -> confirmarExclusao(service)
                 }
             }
@@ -157,33 +240,78 @@ class ServicesFragment : Fragment() {
     }
 
     private fun confirmarExclusao(service: Service) {
+
         AlertDialog.Builder(requireContext())
+
             .setTitle("Excluir Serviço")
-            .setMessage("Tem certeza que deseja excluir ${service.name}?")
+
+            .setMessage(
+                "Tem certeza que deseja excluir ${service.name}?"
+            )
+
             .setPositiveButton("Excluir") { _, _ ->
+
                 excluirServico(service)
             }
-            .setNegativeButton("Cancelar", null)
+
+            .setNegativeButton(
+                "Cancelar",
+                null
+            )
+
             .show()
     }
 
     private fun excluirServico(service: Service) {
+
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = repository.deleteService(service.id)
 
-            result.onSuccess {
+            try {
+
+                // PRIMEIRA CAMADA
+                val hasSales =
+                    repository.hasServiceInSales(service.id)
+
+                if (hasSales) {
+
+                    Toast.makeText(
+                        requireContext(),
+                        "Este serviço possui vendas vinculadas e não pode ser excluído",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    return@launch
+                }
+
+                // SEGUNDA CAMADA
+                val result =
+                    repository.deleteService(service.id)
+
+                result.onSuccess {
+
+                    Toast.makeText(
+                        requireContext(),
+                        "Serviço excluído",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    loadServicos()
+                }
+
+                result.onFailure { error ->
+
+                    Toast.makeText(
+                        requireContext(),
+                        error.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+            } catch (e: Exception) {
+
                 Toast.makeText(
                     requireContext(),
-                    "Serviço excluído",
-                    Toast.LENGTH_SHORT
-                ).show()
-                loadServicos()
-            }
-
-            result.onFailure { error ->
-                Toast.makeText(
-                    requireContext(),
-                    "Erro ao excluir: ${error.message}",
+                    e.message ?: "Erro inesperado",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -191,7 +319,9 @@ class ServicesFragment : Fragment() {
     }
 
     override fun onResume() {
+
         super.onResume()
+
         loadServicos()
     }
 }
