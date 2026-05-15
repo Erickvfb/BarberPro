@@ -1,6 +1,7 @@
 package com.example.barberpro.repository
 
 import com.example.barberpro.data.api.*
+import com.example.barberpro.model.BarberProfile
 import okhttp3.ResponseBody
 import org.json.JSONObject
 
@@ -100,6 +101,28 @@ class AuthRepository(
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: AuthRepository().also { INSTANCE = it }
             }
+        }
+    }
+
+    suspend fun updateProfile(profile: BarberProfile): Result<Unit> {
+        return try {
+            val response = ApiClient.apiService.updateProfile(
+                UpdateProfileRequest(
+                    email = profile.email,
+                    full_name = profile.nomeCompleto,
+                    barbershop_name = profile.barbeariaNome,
+                    phone = profile.telefone
+                )
+            )
+
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Erro ao atualizar"))
+            }
+
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }
