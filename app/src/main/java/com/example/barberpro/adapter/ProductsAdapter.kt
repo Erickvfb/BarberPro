@@ -48,6 +48,9 @@ class ProdutosAdapter(
             // Nome
             nomeText.text = product.name
 
+            //Saldo
+            stockText.text = "Qtd: ${product.quantity}"
+
             // Preço
             precoText.text = "R$ ${String.format("%.2f", product.unitPrice)}"
 

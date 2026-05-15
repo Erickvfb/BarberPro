@@ -163,7 +163,7 @@ class ProductsFragment : Fragment() {
     }
 
     private fun adicionarEstoque(product: StockProducts) {
-        // TODO: Implementar dialog de adicionar estoque
+        //Implementar dialog de adicionar estoque
         Toast.makeText(
             requireContext(),
             "Adicionar estoque: ${product.name}",
