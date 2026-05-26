@@ -115,17 +115,38 @@ class AgendaAdapter(
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
 
         fun bind(appointment: Appointment) {
-            clientNameText.text = appointment.client.name
-            clientInitialText.text = appointment.client.name.take(2).uppercase()
 
-            serviceNameText.text = appointment.service.name
+            clientNameText.text =
+                appointment.client.name
 
-            val formatter = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
-            servicePriceText.text = formatter.format(appointment.service.price)
+            clientInitialText.text =
+                appointment.client.name
+                    .take(2)
+                    .uppercase()
 
+            serviceNameText.text =
+                appointment.service.name
 
-            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-            val startTime = timeFormat.format(appointment.startTime)
+            val formatter =
+                NumberFormat.getCurrencyInstance(
+                    Locale("pt", "BR")
+                )
+
+            servicePriceText.text =
+                formatter.format(
+                    appointment.service.price
+                )
+
+            val timeFormat =
+                SimpleDateFormat(
+                    "HH:mm",
+                    Locale("pt", "BR")
+                )
+
+            timeText.text =
+                timeFormat.format(
+                    appointment.startTime
+                )
 
             itemView.setOnClickListener {
                 onAppointmentClick(appointment)
