@@ -10,16 +10,23 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.barberpro.R
-import com.example.barberpro.model.*
+import com.example.barberpro.model.Appointment
+import com.example.barberpro.model.AppointmentStatus
+import com.example.barberpro.model.BarberConfig
+import com.example.barberpro.model.Client
+import com.example.barberpro.model.Service
+import com.example.barberpro.model.TimeSlotGenerator
 import com.example.barberpro.repository.AppointmentRepository
 import com.example.barberpro.repository.ClientsRepository
+import com.example.barberpro.repository.ServicesRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
 class NewScheduleFragment : Fragment() {
 
@@ -38,209 +45,428 @@ class NewScheduleFragment : Fragment() {
     private var clienteSelecionado: Client? = null
     private var servicoSelecionado: Service? = null
     private var dataSelecionada: Calendar? = null
-    private val horarioSelecionado: Calendar = Calendar.getInstance()
+    private val horarioSelecionado = Calendar.getInstance()
 
-    private val clientsRepository = ClientsRepository.getInstance()
+    private val clientsRepository =
+        ClientsRepository.getInstance()
+
+    private val servicesRepository =
+        ServicesRepository.getInstance()
+
+    private val appointmentRepository =
+        AppointmentRepository.getInstance()
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_new_schedule, container, false)
+
+        return inflater.inflate(
+            R.layout.fragment_new_schedule,
+            container,
+            false
+        )
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?
+    ) {
+
         super.onViewCreated(view, savedInstanceState)
 
         initializeViews(view)
+
         setupClickListeners()
     }
 
     private fun initializeViews(view: View) {
-        backButton = view.findViewById(R.id.backButton)
-        nomeclienteCard = view.findViewById(R.id.nomeclienteCard)
-        clienteSelecionadoText = view.findViewById(R.id.clienteSelecionadoText)
-        servicoCard = view.findViewById(R.id.servicoCard)
-        servicoSelecionadoText = view.findViewById(R.id.servicoSelecionadoText)
-        dataCard = view.findViewById(R.id.dataCard)
-        dataText = view.findViewById(R.id.dataText)
-        horarioCard = view.findViewById(R.id.horarioCard)
-        horarioText = view.findViewById(R.id.horarioText)
-        precoText = view.findViewById(R.id.precoText)
-        agendarButton = view.findViewById(R.id.agendarButton)
+
+        backButton =
+            view.findViewById(R.id.backButton)
+
+        nomeclienteCard =
+            view.findViewById(R.id.nomeclienteCard)
+
+        clienteSelecionadoText =
+            view.findViewById(R.id.clienteSelecionadoText)
+
+        servicoCard =
+            view.findViewById(R.id.servicoCard)
+
+        servicoSelecionadoText =
+            view.findViewById(R.id.servicoSelecionadoText)
+
+        dataCard =
+            view.findViewById(R.id.dataCard)
+
+        dataText =
+            view.findViewById(R.id.dataText)
+
+        horarioCard =
+            view.findViewById(R.id.horarioCard)
+
+        horarioText =
+            view.findViewById(R.id.horarioText)
+
+        precoText =
+            view.findViewById(R.id.precoText)
+
+        agendarButton =
+            view.findViewById(R.id.agendarButton)
     }
 
     private fun setupClickListeners() {
+
         backButton.setOnClickListener {
+
             parentFragmentManager.popBackStack()
         }
 
-        nomeclienteCard.setOnClickListener { selecionarCliente() }
-        servicoCard.setOnClickListener { selecionarServico() }
-        dataCard.setOnClickListener { selecionarData() }
-        horarioCard.setOnClickListener { selecionarHorario() }
-        agendarButton.setOnClickListener { realizarAgendamento() }
+        nomeclienteCard.setOnClickListener {
+
+            selecionarCliente()
+        }
+
+        servicoCard.setOnClickListener {
+
+            selecionarServico()
+        }
+
+        dataCard.setOnClickListener {
+
+            selecionarData()
+        }
+
+        horarioCard.setOnClickListener {
+
+            selecionarHorario()
+        }
+
+        agendarButton.setOnClickListener {
+
+            realizarAgendamento()
+        }
     }
 
     private fun selecionarCliente() {
+
         lifecycleScope.launch {
-            val result = clientsRepository.getAllClients()
+
+            val result =
+                clientsRepository.getAllClients()
 
             result.onSuccess { clientes ->
-                if (clientes.isEmpty()) {
-                    toast("Nenhum cliente cadastrado")
-                    return@onSuccess
-                }
 
-                val nomes = clientes.map { it.name }.toTypedArray()
+                val nomes =
+                    clientes.map {
+                        it.name
+                    }.toTypedArray()
 
                 MaterialAlertDialogBuilder(requireContext())
                     .setTitle("Selecionar Cliente")
                     .setItems(nomes) { _, which ->
-                        clienteSelecionado = clientes[which]
-                        clienteSelecionadoText.text = clientes[which].name
+
+                        clienteSelecionado =
+                            clientes[which]
+
+                        clienteSelecionadoText.text =
+                            clientes[which].name
                     }
                     .show()
+            }
+
+            result.onFailure {
+
+                toast(
+                    it.message
+                        ?: "Erro ao carregar clientes"
+                )
             }
         }
     }
 
     private fun selecionarServico() {
-        val servicos = listOf(
-            Service("1", "Corte Social", 45.0),
-            Service("2", "Barba Completa", 25.0),
-            Service("3", "Corte + Barba", 65.0),
-            Service("4", "Platinado", 60.0),
-            Service("5", "Química", 80.0)
-        )
 
-        val nomes = servicos.map {
-            "${it.name} - R$ ${String.format("%.2f", it.price)}"
-        }.toTypedArray()
+        lifecycleScope.launch {
 
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Selecionar Serviço")
-            .setItems(nomes) { _, which ->
-                servicoSelecionado = servicos[which]
-                servicoSelecionadoText.text = servicos[which].name
-                precoText.text = "R$ ${String.format("%.2f", servicos[which].price)}"
+            val result =
+                servicesRepository.getAllServices()
+
+            result.onSuccess { servicos ->
+
+                val nomes =
+                    servicos.map {
+
+                        "${it.name} - R$ %.2f"
+                            .format(it.price)
+
+                    }.toTypedArray()
+
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Selecionar Serviço")
+                    .setItems(nomes) { _, which ->
+
+                        servicoSelecionado =
+                            servicos[which]
+
+                        servicoSelecionadoText.text =
+                            servicos[which].name
+
+                        precoText.text =
+                            "R$ %.2f".format(
+                                servicos[which].price
+                            )
+                    }
+                    .show()
             }
-            .show()
+
+            result.onFailure {
+
+                toast(
+                    it.message
+                        ?: "Erro ao carregar serviços"
+                )
+            }
+        }
     }
 
     private fun selecionarData() {
-        val picker = MaterialDatePicker.Builder.datePicker()
-            .setTitleText("Selecionar data")
-            .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
-            .setTheme(R.style.ThemeOverlay_BarberPro_MaterialCalendar)
-            .build()
+
+        val picker =
+            MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Selecionar data")
+                .setSelection(
+                    MaterialDatePicker.todayInUtcMilliseconds()
+                )
+                .build()
 
         picker.addOnPositiveButtonClickListener { selection ->
-            val calendar = Calendar.getInstance().apply {
-                timeInMillis = selection
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
 
-            dataSelecionada = calendar
+            val utcCalendar =
+                Calendar.getInstance(
+                    java.util.TimeZone.getTimeZone("UTC")
+                ).apply {
 
-            val format = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
-            dataText.text = format.format(calendar.time)
+                    timeInMillis = selection
+                }
 
-            // Limpar horário selecionado quando troca de data
-            horarioText.text = "Selecionar horário"
+            val localCalendar =
+                Calendar.getInstance().apply {
+
+                    set(
+                        Calendar.YEAR,
+                        utcCalendar.get(Calendar.YEAR)
+                    )
+
+                    set(
+                        Calendar.MONTH,
+                        utcCalendar.get(Calendar.MONTH)
+                    )
+
+                    set(
+                        Calendar.DAY_OF_MONTH,
+                        utcCalendar.get(Calendar.DAY_OF_MONTH)
+                    )
+
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+            dataSelecionada = localCalendar
+
+            val format =
+                SimpleDateFormat(
+                    "dd/MM/yyyy",
+                    Locale("pt", "BR")
+                )
+
+            dataText.text =
+                format.format(localCalendar.time)
+
+            horarioText.text =
+                "Selecionar horário"
         }
 
-        picker.show(parentFragmentManager, "DATE_PICKER")
+        picker.show(
+            parentFragmentManager,
+            "DATE_PICKER"
+        )
     }
 
     private fun selecionarHorario() {
-        dataSelecionada ?: run {
-            toast("Selecione uma data primeiro")
-            return
-        }
 
-        // ✅ SOLUÇÃO SIMPLES: Usa TimeSlotGenerator que já filtra o almoço
-        val config = BarberConfig.getInstance()
-        val horarios = TimeSlotGenerator.generate(config)
+        val data =
+            dataSelecionada ?: run {
 
-        if (horarios.isEmpty()) {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Sem Horários Disponíveis")
-                .setMessage("Não há horários disponíveis.\n\nVerifique as configurações.")
-                .setPositiveButton("OK", null)
-                .show()
-            return
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Selecionar Horário")
-            .setItems(horarios.toTypedArray()) { _, which ->
-                val horario = horarios[which]
-                val parts = horario.split(":")
-                horarioSelecionado.set(Calendar.HOUR_OF_DAY, parts[0].toInt())
-                horarioSelecionado.set(Calendar.MINUTE, parts[1].toInt())
-                horarioText.text = horario
+                toast("Selecione uma data primeiro")
+                return
             }
-            .setNegativeButton("Cancelar", null)
-            .show()
+
+        lifecycleScope.launch {
+
+            val horariosOcupados =
+                appointmentRepository
+                    .getBookedSlotsForDay(
+                        data.time
+                    )
+
+            val config =
+                BarberConfig.getInstance()
+
+            val horarios =
+                TimeSlotGenerator.generate(config)
+                    .filterNot {
+                        horariosOcupados.contains(it)
+                    }
+
+            if (horarios.isEmpty()) {
+
+                toast("Nenhum horário disponível")
+                return@launch
+            }
+
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Selecionar Horário")
+                .setItems(
+                    horarios.toTypedArray()
+                ) { _, which ->
+
+                    val horario =
+                        horarios[which]
+
+                    val parts =
+                        horario.split(":")
+
+                    horarioSelecionado.set(
+                        Calendar.HOUR_OF_DAY,
+                        parts[0].toInt()
+                    )
+
+                    horarioSelecionado.set(
+                        Calendar.MINUTE,
+                        parts[1].toInt()
+                    )
+
+                    horarioSelecionado.set(
+                        Calendar.SECOND,
+                        0
+                    )
+
+                    horarioSelecionado.set(
+                        Calendar.MILLISECOND,
+                        0
+                    )
+
+                    horarioText.text =
+                        horario
+                }
+                .show()
+        }
     }
 
     private fun realizarAgendamento() {
-        val cliente = clienteSelecionado ?: run {
-            toast("Selecione um cliente")
-            return
-        }
 
-        val servico = servicoSelecionado ?: run {
-            toast("Selecione um serviço")
-            return
-        }
+        val cliente =
+            clienteSelecionado ?: run {
 
-        val data = dataSelecionada ?: run {
-            toast("Selecione uma data")
-            return
-        }
+                toast("Selecione um cliente")
+                return
+            }
 
-        if (horarioText.text.isNullOrBlank() || horarioText.text == "Selecionar horário") {
+        val servico =
+            servicoSelecionado ?: run {
+
+                toast("Selecione um serviço")
+                return
+            }
+
+        val data =
+            dataSelecionada ?: run {
+
+                toast("Selecione uma data")
+                return
+            }
+
+        if (horarioText.text.toString()
+            == "Selecionar horário"
+        ) {
+
             toast("Selecione um horário")
             return
         }
 
-        val startCalendar = Calendar.getInstance().apply {
-            time = data.time
-            set(Calendar.HOUR_OF_DAY, horarioSelecionado.get(Calendar.HOUR_OF_DAY))
-            set(Calendar.MINUTE, horarioSelecionado.get(Calendar.MINUTE))
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
+        agendarButton.isEnabled = false
 
-        val appointment = Appointment(
-            id = UUID.randomUUID().toString(),
-            client = cliente,
-            service = servico,
-            startTime = startCalendar.time,
-            status = AppointmentStatus.SCHEDULED
-        )
+        val startCalendar =
+            Calendar.getInstance().apply {
+
+                time = data.time
+
+                set(
+                    Calendar.HOUR_OF_DAY,
+                    horarioSelecionado.get(
+                        Calendar.HOUR_OF_DAY
+                    )
+                )
+
+                set(
+                    Calendar.MINUTE,
+                    horarioSelecionado.get(
+                        Calendar.MINUTE
+                    )
+                )
+
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+        val appointment =
+            Appointment(
+                id = "",
+                client = cliente,
+                service = servico,
+                startTime = startCalendar.time,
+                status = AppointmentStatus.SCHEDULED,
+                notes = null
+            )
 
         lifecycleScope.launch {
-            val result = AppointmentRepository
-                .getInstance()
-                .createAppointment(appointment)
 
-            if (result.isSuccess) {
-                toast("✅ Agendamento realizado com sucesso!")
+            val result =
+                appointmentRepository
+                    .createAppointment(
+                        appointment
+                    )
+
+            result.onSuccess {
+
+                toast("Agendamento criado com sucesso")
+
                 parentFragmentManager.popBackStack()
-            } else {
-                toast("❌ ${result.exceptionOrNull()?.message ?: "Erro ao agendar"}")
             }
+
+            result.onFailure {
+
+                toast(
+                    it.message
+                        ?: "Erro ao criar agendamento"
+                )
+            }
+
+            agendarButton.isEnabled = true
         }
     }
 
     private fun toast(message: String) {
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+
+        Toast.makeText(
+            requireContext(),
+            message,
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }

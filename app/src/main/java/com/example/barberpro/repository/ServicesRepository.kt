@@ -3,93 +3,149 @@ package com.example.barberpro.repository
 import com.example.barberpro.data.api.RetrofitClient
 import com.example.barberpro.data.api.ServiceRequest
 import com.example.barberpro.model.Service
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class ServicesRepository {
+class ServicesRepository private constructor() {
 
     private val apiService = RetrofitClient.apiService
 
-    // LISTAR SERVIÇOS
     suspend fun getAllServices(): Result<List<Service>> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response = apiService.getServices()
+            try {
 
-            if (response.isSuccessful) {
+                val response = apiService.getServices()
 
-                val services =
-                    response.body()?.data ?: emptyList()
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-                Result.success(services)
-
-            } else {
-
-                Result.failure(
-                    Exception("Erro ao carregar serviços")
-                )
-            }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
-        }
-    }
-
-    // BUSCAR SERVIÇO POR ID
-    suspend fun getServiceById(
-        id: String
-    ): Result<Service> {
-
-        return try {
-
-            val response = apiService.getService(id)
-
-            if (response.isSuccessful) {
-
-                val service = response.body()?.data
-
-                if (service != null) {
-
-                    Result.success(service)
+                    Result.success(
+                        response.body()?.data ?: emptyList()
+                    )
 
                 } else {
 
                     Result.failure(
-                        Exception("Serviço não encontrado")
+                        Exception(
+                            response.body()?.message
+                                ?: "Erro ao carregar serviços"
+                        )
                     )
                 }
 
-            } else {
+            } catch (e: Exception) {
 
-                Result.failure(
-                    Exception("Erro ao buscar serviço")
-                )
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
     }
 
-    // CRIAR SERVIÇO
+    suspend fun searchServices(
+        query: String
+    ): Result<List<Service>> {
+
+        return withContext(Dispatchers.IO) {
+
+            try {
+
+                val response = apiService.getServices()
+
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
+
+                    val filtered =
+                        response.body()?.data
+                            ?.filter {
+
+                                it.name.contains(
+                                    query,
+                                    ignoreCase = true
+                                )
+                            } ?: emptyList()
+
+                    Result.success(filtered)
+
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao pesquisar serviços")
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun getServiceById(
+        id: String
+    ): Result<Service> {
+
+        return withContext(Dispatchers.IO) {
+
+            try {
+
+                val response =
+                    apiService.getService(id)
+
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
+
+                    response.body()?.data?.let {
+
+                        Result.success(it)
+
+                    } ?: Result.failure(
+                        Exception("Serviço não encontrado")
+                    )
+
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao buscar serviço")
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
+        }
+    }
+
     suspend fun addService(
         request: ServiceRequest
     ): Result<Service> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response =
-                apiService.createService(request)
+            try {
 
-            if (response.isSuccessful) {
+                val response =
+                    apiService.createService(request)
 
-                val service =
-                    response.body()?.data
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-                if (service != null) {
+                    response.body()?.data?.let {
 
-                    Result.success(service)
+                        Result.success(it)
+
+                    } ?: Result.failure(
+                        Exception("Serviço inválido")
+                    )
 
                 } else {
 
@@ -98,38 +154,40 @@ class ServicesRepository {
                     )
                 }
 
-            } else {
+            } catch (e: Exception) {
 
-                Result.failure(
-                    Exception("Erro ao criar serviço")
-                )
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
     }
 
-    // ATUALIZAR SERVIÇO
     suspend fun updateService(
         id: String,
         request: ServiceRequest
     ): Result<Service> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response =
-                apiService.updateService(id, request)
+            try {
 
-            if (response.isSuccessful) {
+                val response =
+                    apiService.updateService(
+                        id,
+                        request
+                    )
 
-                val service =
-                    response.body()?.data
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-                if (service != null) {
+                    response.body()?.data?.let {
 
-                    Result.success(service)
+                        Result.success(it)
+
+                    } ?: Result.failure(
+                        Exception("Serviço inválido")
+                    )
 
                 } else {
 
@@ -138,98 +196,69 @@ class ServicesRepository {
                     )
                 }
 
-            } else {
+            } catch (e: Exception) {
 
-                Result.failure(
-                    Exception("Erro ao atualizar serviço")
-                )
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
     }
 
-    // EXCLUIR SERVIÇO
     suspend fun deleteService(
         serviceId: String
     ): Result<Boolean> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response =
-                apiService.deleteService(serviceId)
+            try {
 
-            if (response.isSuccessful) {
+                val response =
+                    apiService.deleteService(serviceId)
 
-                Result.success(true)
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-            } else {
+                    Result.success(true)
 
-                Result.failure(
-                    Exception("Erro ao excluir serviço")
-                )
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao excluir serviço")
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
     }
 
-    // VALIDAÇÃO LOCAL
     suspend fun hasServiceInSales(
         serviceId: String
-    ): Boolean {
+    ): Boolean =
+        withContext(Dispatchers.IO) {
 
-        return try {
+            try {
 
-            // futura integração com vendas
-            false
+                val response =
+                    apiService.hasServiceSales(serviceId)
 
-        } catch (e: Exception) {
+                if (response.isSuccessful) {
 
-            true
-        }
-    }
+                    response.body()?.data ?: false
 
-    // PESQUISA
-    suspend fun searchServices(
-        query: String
-    ): Result<List<Service>> {
+                } else {
 
-        return try {
+                    false
+                }
 
-            val response = apiService.getServices()
+            } catch (e: Exception) {
 
-            if (response.isSuccessful) {
-
-                val services =
-                    response.body()?.data ?: emptyList()
-
-                val filtered =
-                    services.filter {
-                        it.name.contains(
-                            query,
-                            ignoreCase = true
-                        )
-                    }
-
-                Result.success(filtered)
-
-            } else {
-
-                Result.failure(
-                    Exception("Erro ao pesquisar serviços")
-                )
+                false
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
-    }
 
     companion object {
 
@@ -240,8 +269,9 @@ class ServicesRepository {
 
             return INSTANCE ?: synchronized(this) {
 
-                INSTANCE ?: ServicesRepository()
-                    .also { INSTANCE = it }
+                INSTANCE ?: ServicesRepository().also {
+                    INSTANCE = it
+                }
             }
         }
     }

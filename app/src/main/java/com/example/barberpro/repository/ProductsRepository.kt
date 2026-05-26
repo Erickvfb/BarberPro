@@ -3,89 +3,155 @@ package com.example.barberpro.repository
 import com.example.barberpro.data.api.ProductRequest
 import com.example.barberpro.data.api.RetrofitClient
 import com.example.barberpro.model.StockProducts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class ProductsRepository {
+class ProductsRepository private constructor() {
 
     private val apiService = RetrofitClient.apiService
 
-    // LISTAR PRODUTOS
     suspend fun getAllProducts(): Result<List<StockProducts>> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response = apiService.getProducts()
+            try {
 
-            if (response.isSuccessful) {
+                val response = apiService.getProducts()
 
-                val products = response.body()?.data ?: emptyList()
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-                Result.success(products)
-
-            } else {
-
-                Result.failure(
-                    Exception("Erro ao carregar produtos")
-                )
-            }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
-        }
-    }
-
-    // BUSCAR PRODUTO POR ID
-    suspend fun getProductById(id: String): Result<StockProducts> {
-
-        return try {
-
-            val response = apiService.getProducts()
-
-            if (response.isSuccessful) {
-
-                val product = response.body()?.data
-                    ?.find { it.id == id }
-
-                if (product != null) {
-
-                    Result.success(product)
+                    Result.success(
+                        response.body()?.data ?: emptyList()
+                    )
 
                 } else {
 
                     Result.failure(
-                        Exception("Produto não encontrado")
+                        Exception(
+                            response.body()?.message
+                                ?: "Erro ao carregar produtos"
+                        )
                     )
                 }
 
-            } else {
+            } catch (e: Exception) {
 
-                Result.failure(
-                    Exception("Erro ao buscar produto")
-                )
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
     }
 
-    // CRIAR PRODUTO
+    suspend fun searchProducts(
+        query: String
+    ): Result<List<StockProducts>> {
+
+        return withContext(Dispatchers.IO) {
+
+            try {
+
+                val response = apiService.getProducts()
+
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
+
+                    val filtered =
+                        response.body()?.data
+                            ?.filter {
+
+                                it.name.contains(
+                                    query,
+                                    ignoreCase = true
+                                )
+                            } ?: emptyList()
+
+                    Result.success(filtered)
+
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao pesquisar produtos")
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun getProductById(
+        id: String
+    ): Result<StockProducts> {
+
+        return withContext(Dispatchers.IO) {
+
+            try {
+
+                val response = apiService.getProducts()
+
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
+
+                    val product =
+                        response.body()?.data
+                            ?.find { it.id == id }
+
+                    if (product != null) {
+
+                        Result.success(product)
+
+                    } else {
+
+                        Result.failure(
+                            Exception("Produto não encontrado")
+                        )
+                    }
+
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao buscar produto")
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
+        }
+    }
+
     suspend fun addProduct(
         request: ProductRequest
     ): Result<StockProducts> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response = apiService.createProduct(request)
+            try {
 
-            if (response.isSuccessful) {
+                val response =
+                    apiService.createProduct(request)
 
-                val createdProduct = response.body()?.data
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-                if (createdProduct != null) {
+                    response.body()?.data?.let {
 
-                    Result.success(createdProduct)
+                        Result.success(it)
+
+                    } ?: Result.failure(
+                        Exception("Produto inválido")
+                    )
 
                 } else {
 
@@ -94,39 +160,40 @@ class ProductsRepository {
                     )
                 }
 
-            } else {
+            } catch (e: Exception) {
 
-                Result.failure(
-                    Exception("Erro ao criar produto")
-                )
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
     }
 
-    // ATUALIZAR PRODUTO
     suspend fun updateProduct(
         productId: String,
         request: ProductRequest
     ): Result<StockProducts> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response = apiService.updateProduct(
-                productId,
-                request
-            )
+            try {
 
-            if (response.isSuccessful) {
+                val response =
+                    apiService.updateProduct(
+                        productId,
+                        request
+                    )
 
-                val updatedProduct = response.body()?.data
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-                if (updatedProduct != null) {
+                    response.body()?.data?.let {
 
-                    Result.success(updatedProduct)
+                        Result.success(it)
+
+                    } ?: Result.failure(
+                        Exception("Produto inválido")
+                    )
 
                 } else {
 
@@ -135,60 +202,67 @@ class ProductsRepository {
                     )
                 }
 
-            } else {
+            } catch (e: Exception) {
 
-                Result.failure(
-                    Exception("Erro ao atualizar produto")
-                )
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
         }
     }
 
-    // DELETAR PRODUTO
+    suspend fun hasProductInSales(
+        productId: String
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+
+            try {
+
+                val response =
+                    apiService.hasProductSales(productId)
+
+                if (response.isSuccessful) {
+
+                    response.body()?.data ?: false
+
+                } else {
+
+                    false
+                }
+
+            } catch (e: Exception) {
+
+                false
+            }
+        }
+
     suspend fun deleteProduct(
         productId: String
     ): Result<Boolean> {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val response = apiService.deleteProduct(productId)
+            try {
 
-            if (response.isSuccessful) {
+                val response =
+                    apiService.deleteProduct(productId)
 
-                Result.success(true)
+                if (
+                    response.isSuccessful &&
+                    response.body()?.success == true
+                ) {
 
-            } else {
+                    Result.success(true)
 
-                Result.failure(
-                    Exception("Erro ao excluir produto")
-                )
+                } else {
+
+                    Result.failure(
+                        Exception("Erro ao excluir produto")
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
             }
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
-        }
-    }
-
-    // VERIFICAR VENDAS
-    suspend fun hasProductInSales(
-        productId: String
-    ): Boolean {
-
-        return try {
-
-            val response = apiService.hasProductSales(productId)
-
-            response.isSuccessful &&
-                    response.body()?.data == true
-
-        } catch (e: Exception) {
-
-            false
         }
     }
 

@@ -1,181 +1,354 @@
 package com.example.barberpro.repository
 
+import com.example.barberpro.data.api.*
 import com.example.barberpro.model.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
 class AppointmentRepository private constructor() {
 
-    private val appointments = mutableListOf<Appointment>()
-    private val clients = mutableListOf<Client>()
-    private val services = mutableListOf<Service>()
-    private val config = BarberConfig()
+    private val apiService = RetrofitClient.apiService
 
-    init {
-        loadMockData()
+    private val apiDateFormat = SimpleDateFormat(
+        "yyyy-MM-dd'T'HH:mm:ssXXX",
+        Locale.US
+    ).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
     }
 
+    private fun mapAppointment(api: AppointmentFull): Appointment {
+
+        val parsedDate = try {
+
+            apiDateFormat.parse(api.start_time)
+
+        } catch (e: Exception) {
+
+            e.printStackTrace()
+            null
+        }
+
+        println("API DATE: ${api.start_time}")
+        println("PARSED DATE: $parsedDate")
+
+        return Appointment(
+            id = api.id,
+
+            client = Client(
+                id = api.clients.id,
+                name = api.clients.name,
+                email = "",
+                phone = api.clients.phone
+            ),
+
+            service = Service(
+                id = api.services.id,
+                name = api.services.name,
+                price = api.services.price
+            ),
+
+            startTime = parsedDate ?: Date(),
+
+            status = AppointmentStatus.fromString(api.status),
+
+            notes = api.notes
+        )
+    }
 
     suspend fun getAllAppointments(): Result<List<Appointment>> =
         withContext(Dispatchers.IO) {
-            delay(300)
-            Result.success(appointments.toList())
+
+            try {
+
+                val response = apiService.getAppointments()
+
+                if (response.isSuccessful) {
+
+                    val appointments =
+                        response.body()?.data?.map {
+                            mapAppointment(it)
+                        } ?: emptyList()
+
+                    Result.success(appointments)
+
+                } else {
+
+                    Result.failure(
+                        Exception(response.message())
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
         }
 
-    suspend fun getAppointmentsByDate(date: Date): Result<List<Appointment>> =
+    suspend fun getAppointmentsByDate(
+        date: Date
+    ): Result<List<Appointment>> =
         withContext(Dispatchers.IO) {
-            delay(300)
-            Result.success(
-                appointments
-                    .filter { isSameDay(it.startTime, date) }
-                    .sortedBy { it.startTime }
-            )
+
+            try {
+
+                val formattedDate = SimpleDateFormat(
+                    "yyyy-MM-dd",
+                    Locale.getDefault()
+                ).format(date)
+
+                val response =
+                    apiService.getAppointments(formattedDate)
+
+                if (response.isSuccessful) {
+
+                    val appointments =
+                        response.body()?.data?.map {
+                            mapAppointment(it)
+                        } ?: emptyList()
+
+                    Result.success(appointments)
+
+                } else {
+
+                    Result.failure(
+                        Exception(response.message())
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
         }
 
-    suspend fun createAppointment(appointment: Appointment): Result<Appointment> =
-        withContext(Dispatchers.IO) {
-            delay(400)
-
-            val cal = Calendar.getInstance().apply {
-                time = appointment.startTime
-            }
-
-            val hour = cal.get(Calendar.HOUR_OF_DAY)
-            val minute = cal.get(Calendar.MINUTE)
-
-            // horário de funcionamento
-            if (hour < config.openingHour || hour >= config.closingHour) {
-                return@withContext Result.failure(
-                    Exception("Fora do horário de funcionamento")
-                )
-            }
-
-            //slots fixos (30 em 30)
-            if (minute % config.slotDurationMinutes != 0) {
-                return@withContext Result.failure(
-                    Exception("Agendamentos apenas de 30 em 30 minutos")
-                )
-            }
-
-            // conflito de horário
-            val conflict = appointments.any {
-                it.startTime == appointment.startTime
-            }
-
-            if (conflict) {
-                return@withContext Result.failure(
-                    Exception("Horário já ocupado")
-                )
-            }
-
-            appointments.add(appointment)
-            Result.success(appointment)
-        }
-
-    suspend fun updateAppointmentStatus(
-        appointmentId: String,
-        status: AppointmentStatus
+    suspend fun getAppointmentById(
+        appointmentId: String
     ): Result<Appointment> =
         withContext(Dispatchers.IO) {
-            delay(300)
 
-            val index = appointments.indexOfFirst { it.id == appointmentId }
-            if (index == -1) {
-                return@withContext Result.failure(Exception("Agendamento não encontrado"))
+            try {
+
+                val response =
+                    apiService.getAppointmentById(appointmentId)
+
+                if (response.isSuccessful) {
+
+                    val appointment =
+                        response.body()?.data
+
+                    if (appointment != null) {
+
+                        Result.success(
+                            mapAppointment(appointment)
+                        )
+
+                    } else {
+
+                        Result.failure(
+                            Exception("Agendamento não encontrado")
+                        )
+                    }
+
+                } else {
+
+                    Result.failure(
+                        Exception(response.message())
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
             }
-
-            val updated = appointments[index].copy(status = status)
-            appointments[index] = updated
-            Result.success(updated)
         }
 
-    suspend fun deleteAppointment(appointmentId: String): Result<Boolean> =
+    suspend fun completeAppointment(
+        appointmentId: String,
+        status: String,
+        consumptions: List<ConsumptionItem>
+    ): Result<AttendanceRecord> =
         withContext(Dispatchers.IO) {
-            delay(300)
 
-            val removed = appointments.removeIf { it.id == appointmentId }
-            if (!removed) {
-                return@withContext Result.failure(Exception("Agendamento não encontrado"))
+            try {
+
+                val request =
+                    CompleteAppointmentRequest(
+                        status = status,
+                        consumption_items =
+                        consumptions.map {
+
+                            ConsumptionItemRequest(
+                                product_id = it.productId,
+                                quantity = it.quantity,
+                                unit_price = it.unitPrice
+                            )
+                        }
+                    )
+
+                val response =
+                    apiService.completeAppointment(
+                        id = appointmentId,
+                        data = request
+                    )
+
+                if (response.isSuccessful) {
+
+                    val attendance =
+                        response.body()?.data
+
+                    if (attendance != null) {
+
+                        Result.success(attendance)
+
+                    } else {
+
+                        Result.failure(
+                            Exception("Resposta vazia da API")
+                        )
+                    }
+
+                } else {
+
+                    Result.failure(
+                        Exception(
+                            response.errorBody()?.string()
+                                ?: response.message()
+                        )
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
             }
-
-            Result.success(true)
         }
 
-    /* ===================== HELPERS ===================== */
+    suspend fun createAppointment(
+        appointment: Appointment
+    ): Result<Appointment> =
+        withContext(Dispatchers.IO) {
 
-    private fun isSameDay(d1: Date, d2: Date): Boolean {
-        val c1 = Calendar.getInstance().apply { time = d1 }
-        val c2 = Calendar.getInstance().apply { time = d2 }
-        return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
-                c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
-    }
+            try {
 
-    suspend fun getBookedSlotsForDay(date: Date): List<String> {
-        val result = getAppointmentsByDate(date)
-        if (result.isFailure) return emptyList()
+                val dateFormat = SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    Locale.US
+                ).apply {
+                    timeZone = TimeZone.getTimeZone("America/Sao_Paulo")
+                }
 
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        return result.getOrNull()?.map {
-            formatter.format(it.startTime)
-        } ?: emptyList()
-    }
+                val request =
+                    AppointmentRequest(
+                        client_id = appointment.client.id,
+                        service_id = appointment.service.id,
+                        start_time = dateFormat.format(
+                            appointment.startTime
+                        ),
+                        notes = appointment.notes
+                    )
 
-    private fun loadMockData() {
-        clients.addAll(
-            listOf(
-                Client("1", "Carlos Silva", "11999999999", "carlos@email.com"),
-                Client("2", "Igor Santos", "11988888888", "igor@email.com"),
-                Client("3", "Diego Oliveira", "11977777777", "diego@email.com")
-            )
-        )
+                val response =
+                    apiService.createAppointment(request)
 
-        services.addAll(
-            listOf(
-                Service("1", "Barba", 20.0),
-                Service("2", "Corte social", 45.0),
-                Service("3", "Corte + Barba", 65.0)
-            )
-        )
+                if (response.isSuccessful) {
 
-        val cal = Calendar.getInstance()
+                    val createdAppointment =
+                        response.body()?.data
 
-        fun add(hour: Int, minute: Int, client: Client, service: Service) {
-            cal.set(Calendar.HOUR_OF_DAY, hour)
-            cal.set(Calendar.MINUTE, minute)
-            cal.set(Calendar.SECOND, 0)
+                    if (createdAppointment != null) {
 
-            val start = cal.time
-            cal.add(Calendar.MINUTE, config.slotDurationMinutes)
-            val end = cal.time
+                        Result.success(
+                            mapAppointment(createdAppointment)
+                        )
 
-            appointments.add(
-                Appointment(
-                    id = UUID.randomUUID().toString(),
-                    client = client,
-                    service = service,
-                    startTime = start,
-                    status = AppointmentStatus.SCHEDULED
-                )
-            )
+                    } else {
 
-            cal.add(Calendar.MINUTE, -config.slotDurationMinutes)
+                        Result.failure(
+                            Exception("Resposta vazia da API")
+                        )
+                    }
+
+                } else {
+
+                    Result.failure(
+                        Exception(response.message())
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
         }
 
-        add(9, 0, clients[0], services[0])
-        add(9, 30, clients[1], services[1])
-        add(10, 0, clients[2], services[2])
-    }
+    suspend fun getBookedSlotsForDay(
+        date: Date
+    ): List<String> =
+        withContext(Dispatchers.IO) {
+
+            try {
+
+                val result =
+                    getAppointmentsByDate(date)
+
+                result.getOrNull()
+                    ?.map { appointment ->
+
+                        SimpleDateFormat(
+                            "HH:mm",
+                            Locale.getDefault()
+                        ).format(
+                            appointment.startTime
+                        )
+
+                    } ?: emptyList()
+
+            } catch (e: Exception) {
+
+                emptyList()
+            }
+        }
+    suspend fun deleteAppointment(
+        appointmentId: String
+    ): Result<Boolean> =
+        withContext(Dispatchers.IO) {
+
+            try {
+
+                val response =
+                    apiService.deleteAppointment(appointmentId)
+
+                if (response.isSuccessful) {
+
+                    Result.success(true)
+
+                } else {
+
+                    Result.failure(
+                        Exception(response.message())
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                Result.failure(e)
+            }
+        }
 
     companion object {
+
         @Volatile
         private var INSTANCE: AppointmentRepository? = null
 
-        fun getInstance(): AppointmentRepository =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: AppointmentRepository().also { INSTANCE = it }
+        fun getInstance(): AppointmentRepository {
+
+            return INSTANCE ?: synchronized(this) {
+
+                INSTANCE ?: AppointmentRepository()
+                    .also { INSTANCE = it }
             }
+        }
     }
 }

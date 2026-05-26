@@ -6,7 +6,11 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -14,8 +18,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.barberpro.adapter.ConsumptionAdapter
 import com.example.barberpro.adapter.ServiceSelectionAdapter
-import com.example.barberpro.model.*
+import com.example.barberpro.model.Appointment
+import com.example.barberpro.model.AttendanceRecord
+import com.example.barberpro.model.AttendanceStatus
+import com.example.barberpro.model.ConsumptionItem
+import com.example.barberpro.model.ProductType
+import com.example.barberpro.model.StockProducts
 import com.example.barberpro.model.com.example.barberpro.adapter.ProductSelectionAdapter
+import com.example.barberpro.repository.AppointmentRepository
 import com.example.barberpro.repository.ProductsRepository
 import com.example.barberpro.repository.ServicesRepository
 import com.example.barberpro.util.CurrencyUtils
@@ -23,18 +33,23 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputLayout
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
-import java.util.*
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class ConfirmAttendanceFragment : Fragment() {
 
     companion object {
+
         private const val ARG_APPOINTMENT_ID = "appointment_id"
 
-        fun newInstance(appointmentId: String): ConfirmAttendanceFragment {
+        fun newInstance(
+            appointmentId: String
+        ): ConfirmAttendanceFragment {
+
             return ConfirmAttendanceFragment().apply {
+
                 arguments = Bundle().apply {
                     putString(ARG_APPOINTMENT_ID, appointmentId)
                 }
@@ -42,10 +57,10 @@ class ConfirmAttendanceFragment : Fragment() {
         }
     }
 
-    // Header
+    // HEADER
     private lateinit var backButton: ImageView
 
-    // Info do agendamento
+    // INFO AGENDAMENTO
     private lateinit var clientInitialText: TextView
     private lateinit var clientNameText: TextView
     private lateinit var scheduledTimeText: TextView
@@ -53,57 +68,70 @@ class ConfirmAttendanceFragment : Fragment() {
     private lateinit var servicePriceText: TextView
     private lateinit var editServiceButton: ImageView
 
-    // Presença
+    // STATUS
     private lateinit var attendedCard: MaterialCardView
     private lateinit var noShowCard: MaterialCardView
 
-    // Consumos
+    // CONSUMOS
     private lateinit var consumptionSection: LinearLayout
     private lateinit var addConsumptionButton: MaterialCardView
     private lateinit var consumptionRecyclerView: RecyclerView
 
-    // Total
+    // TOTAL
     private lateinit var totalServiceNameText: TextView
     private lateinit var totalServicePriceText: TextView
     private lateinit var grandTotalText: TextView
 
-    // Botões
+    // BOTÕES
     private lateinit var finalizarButton: MaterialButton
     private lateinit var confirmNoShowButton: MaterialButton
 
-    // Adapter
+    // ADAPTER
     private lateinit var consumptionAdapter: ConsumptionAdapter
 
-    // Dados
-    private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
-    private var currentStatus = AttendanceStatus.PENDING
-    private var servicePrice = 0.0
-    private var serviceName = ""
-    private var clientName = ""
-    private var clientId = ""
-    private var appointmentId = ""
-    private var serviceId = ""
+    // REPOSITORIES
+    private val appointmentRepository =
+        AppointmentRepository.getInstance()
 
-    // Repository
-    private val productsRepository = ProductsRepository.getInstance()
-    private val servicesRepository = ServicesRepository.getInstance()
+    private val productsRepository =
+        ProductsRepository.getInstance()
+
+    private val servicesRepository =
+        ServicesRepository.getInstance()
+
+    // DADOS
+    private val currencyFormat =
+        NumberFormat.getCurrencyInstance(
+            Locale("pt", "BR")
+        )
+
+    private var appointmentId = ""
+
+    private var appointment: Appointment? = null
+
+    private var currentStatus =
+        AttendanceStatus.PENDING
+
+    private var serviceId = ""
+    private var serviceName = ""
+    private var servicePrice = 0.0
+
+    private var clientId = ""
+    private var clientName = ""
+
     private var productSelectionDialog: AlertDialog? = null
     private var serviceSelectionDialog: AlertDialog? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
+
         super.onCreate(savedInstanceState)
 
-        // Buscar appointment pelo ID
-        appointmentId = requireArguments().getString(ARG_APPOINTMENT_ID)!!
-        val appointment = AppointmentsManager.appointments.find { it.id == appointmentId }
-            ?: throw IllegalStateException("Appointment not found: $appointmentId")
-
-        // Carregar dados
-        clientId = appointment.client.id
-        clientName = appointment.client.name
-        serviceName = appointment.service.name
-        servicePrice = appointment.service.price
-        serviceId = appointment.service.id
+        appointmentId =
+            requireArguments().getString(
+                ARG_APPOINTMENT_ID
+            ) ?: ""
     }
 
     override fun onCreateView(
@@ -111,130 +139,270 @@ class ConfirmAttendanceFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_confirm_attendance, container, false)
+
+        return inflater.inflate(
+            R.layout.fragment_confirm_attendance,
+            container,
+            false
+        )
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?
+    ) {
+
         super.onViewCreated(view, savedInstanceState)
 
         initViews(view)
+
         setupRecyclerView()
+
         setupClicks()
-        loadAppointmentData()
+
+        loadAppointment()
     }
 
     private fun initViews(view: View) {
-        backButton = view.findViewById(R.id.backButton)
-        clientInitialText = view.findViewById(R.id.clientInitialText)
-        clientNameText = view.findViewById(R.id.clientNameText)
-        scheduledTimeText = view.findViewById(R.id.scheduledTimeText)
-        serviceNameText = view.findViewById(R.id.serviceNameText)
-        servicePriceText = view.findViewById(R.id.servicePriceText)
-        editServiceButton = view.findViewById(R.id.editServiceButton)
-        attendedCard = view.findViewById(R.id.attendedCard)
-        noShowCard = view.findViewById(R.id.noShowCard)
-        consumptionSection = view.findViewById(R.id.consumptionSection)
-        addConsumptionButton = view.findViewById(R.id.addConsumptionButton)
-        consumptionRecyclerView = view.findViewById(R.id.consumptionRecyclerView)
-        totalServiceNameText = view.findViewById(R.id.totalServiceNameText)
-        totalServicePriceText = view.findViewById(R.id.totalServicePriceText)
-        grandTotalText = view.findViewById(R.id.grandTotalText)
-        finalizarButton = view.findViewById(R.id.finalizarButton)
-        confirmNoShowButton = view.findViewById(R.id.confirmNoShowButton)
+
+        backButton =
+            view.findViewById(R.id.backButton)
+
+        clientInitialText =
+            view.findViewById(R.id.clientInitialText)
+
+        clientNameText =
+            view.findViewById(R.id.clientNameText)
+
+        scheduledTimeText =
+            view.findViewById(R.id.scheduledTimeText)
+
+        serviceNameText =
+            view.findViewById(R.id.serviceNameText)
+
+        servicePriceText =
+            view.findViewById(R.id.servicePriceText)
+
+        editServiceButton =
+            view.findViewById(R.id.editServiceButton)
+
+        attendedCard =
+            view.findViewById(R.id.attendedCard)
+
+        noShowCard =
+            view.findViewById(R.id.noShowCard)
+
+        consumptionSection =
+            view.findViewById(R.id.consumptionSection)
+
+        addConsumptionButton =
+            view.findViewById(R.id.addConsumptionButton)
+
+        consumptionRecyclerView =
+            view.findViewById(R.id.consumptionRecyclerView)
+
+        totalServiceNameText =
+            view.findViewById(R.id.totalServiceNameText)
+
+        totalServicePriceText =
+            view.findViewById(R.id.totalServicePriceText)
+
+        grandTotalText =
+            view.findViewById(R.id.grandTotalText)
+
+        finalizarButton =
+            view.findViewById(R.id.finalizarButton)
+
+        confirmNoShowButton =
+            view.findViewById(R.id.confirmNoShowButton)
     }
 
     private fun setupRecyclerView() {
-        consumptionAdapter = ConsumptionAdapter { item ->
-            consumptionAdapter.removeItem(item)
-            updateTotal()
-        }
+
+        consumptionAdapter =
+            ConsumptionAdapter { item ->
+
+                consumptionAdapter.removeItem(item)
+
+                updateTotal()
+            }
 
         consumptionRecyclerView.apply {
-            layoutManager = LinearLayoutManager(requireContext())
+
+            layoutManager =
+                LinearLayoutManager(requireContext())
+
             adapter = consumptionAdapter
         }
     }
 
     private fun setupClicks() {
+
         backButton.setOnClickListener {
+
             parentFragmentManager.popBackStack()
         }
 
         editServiceButton.setOnClickListener {
+
             showServiceSelectionDialog()
         }
 
         attendedCard.setOnClickListener {
-            selectAttendanceStatus(AttendanceStatus.ATTENDED)
+
+            selectAttendanceStatus(
+                AttendanceStatus.ATTENDED
+            )
         }
 
         noShowCard.setOnClickListener {
-            selectAttendanceStatus(AttendanceStatus.NO_SHOW)
+
+            selectAttendanceStatus(
+                AttendanceStatus.NO_SHOW
+            )
         }
 
         addConsumptionButton.setOnClickListener {
+
             showAddConsumptionDialog()
         }
 
         finalizarButton.setOnClickListener {
+
             finalizarAtendimento()
         }
 
         confirmNoShowButton.setOnClickListener {
+
             confirmarFalta()
         }
     }
 
-    private fun loadAppointmentData() {
-        val appointment = AppointmentsManager.appointments.find { it.id == appointmentId }
+    private fun loadAppointment() {
 
-        clientInitialText.text = clientName.take(2).uppercase()
-        clientNameText.text = clientName
+        lifecycleScope.launch {
 
-        // Formatar horário
-        val timeFormat = java.text.SimpleDateFormat("HH:mm", Locale.getDefault())
-        scheduledTimeText.text = appointment?.startTime?.let {
-            timeFormat.format(it)
-        } ?: "Horário agendado"
+            val result =
+                appointmentRepository.getAllAppointments()
 
-        serviceNameText.text = serviceName
-        servicePriceText.text = currencyFormat.format(servicePrice)
+            result.onSuccess { appointments ->
 
-        totalServiceNameText.text = serviceName
-        totalServicePriceText.text = currencyFormat.format(servicePrice)
-        grandTotalText.text = currencyFormat.format(servicePrice)
+                val foundAppointment =
+                    appointments.find {
+                        it.id == appointmentId
+                    }
+
+                if (foundAppointment == null) {
+
+                    Toast.makeText(
+                        requireContext(),
+                        "Agendamento não encontrado",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    parentFragmentManager.popBackStack()
+
+                    return@onSuccess
+                }
+
+                appointment = foundAppointment
+
+                clientId =
+                    foundAppointment.client.id
+
+                clientName =
+                    foundAppointment.client.name
+
+                serviceId =
+                    foundAppointment.service.id
+
+                serviceName =
+                    foundAppointment.service.name
+
+                servicePrice =
+                    foundAppointment.service.price
+
+                populateScreen(foundAppointment)
+            }
+
+            result.onFailure {
+
+                Toast.makeText(
+                    requireContext(),
+                    it.message,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
-    private fun selectAttendanceStatus(status: AttendanceStatus) {
+    private fun populateScreen(
+        appointment: Appointment
+    ) {
+
+        clientInitialText.text =
+            appointment.client.getInitial()
+
+        clientNameText.text =
+            appointment.client.name
+
+        val formatter =
+            SimpleDateFormat(
+                "HH:mm",
+                Locale.getDefault()
+            )
+
+        scheduledTimeText.text =
+            formatter.format(
+                appointment.startTime
+            )
+
+        serviceNameText.text =
+            appointment.service.name
+
+        servicePriceText.text =
+            currencyFormat.format(
+                appointment.service.price
+            )
+
+        totalServiceNameText.text =
+            appointment.service.name
+
+        totalServicePriceText.text =
+            currencyFormat.format(
+                appointment.service.price
+            )
+
+        grandTotalText.text =
+            currencyFormat.format(
+                appointment.service.price
+            )
+    }
+
+    private fun selectAttendanceStatus(
+        status: AttendanceStatus
+    ) {
+
         currentStatus = status
 
         when (status) {
+
             AttendanceStatus.ATTENDED -> {
-                attendedCard.setCardBackgroundColor(android.graphics.Color.parseColor("#1A2E1A"))
-                attendedCard.strokeColor = android.graphics.Color.parseColor("#22C55E")
-                attendedCard.strokeWidth = 3
 
-                noShowCard.setCardBackgroundColor(android.graphics.Color.parseColor("#1F1F1F"))
-                noShowCard.strokeColor = android.graphics.Color.parseColor("#4B5563")
-                noShowCard.strokeWidth = 1
+                consumptionSection.visibility =
+                    View.VISIBLE
 
-                consumptionSection.visibility = View.VISIBLE
-                confirmNoShowButton.visibility = View.GONE
-
-                updateTotal()
+                confirmNoShowButton.visibility =
+                    View.GONE
             }
 
             AttendanceStatus.NO_SHOW -> {
-                noShowCard.setCardBackgroundColor(android.graphics.Color.parseColor("#2E1A1A"))
-                noShowCard.strokeColor = android.graphics.Color.parseColor("#EF4444")
-                noShowCard.strokeWidth = 3
 
-                attendedCard.setCardBackgroundColor(android.graphics.Color.parseColor("#1F1F1F"))
-                attendedCard.strokeColor = android.graphics.Color.parseColor("#4B5563")
-                attendedCard.strokeWidth = 1
+                consumptionSection.visibility =
+                    View.GONE
 
-                consumptionSection.visibility = View.GONE
-                confirmNoShowButton.visibility = View.VISIBLE
+                confirmNoShowButton.visibility =
+                    View.VISIBLE
             }
 
             else -> {}
@@ -242,88 +410,182 @@ class ConfirmAttendanceFragment : Fragment() {
     }
 
     private fun showAddConsumptionDialog() {
-        val dialogView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.dialog_add_consumption, null)
 
-        val productSelectorCard = dialogView.findViewById<MaterialCardView>(R.id.productSelectorCard)
-        val selectedProductText = dialogView.findViewById<TextView>(R.id.selectedProductText)
-        val quantityInput = dialogView.findViewById<EditText>(R.id.quantityInput)
-        val quantityLayout = dialogView.findViewById<TextInputLayout>(R.id.quantityLayout)
-        val productInfoSection = dialogView.findViewById<LinearLayout>(R.id.productInfoSection)
-        val unitPriceText = dialogView.findViewById<TextView>(R.id.unitPriceText)
-        val stockQuantityText = dialogView.findViewById<TextView>(R.id.stockQuantityText)
-        val totalPriceText = dialogView.findViewById<TextView>(R.id.totalPriceText)
+        val dialogView =
+            LayoutInflater.from(requireContext())
+                .inflate(
+                    R.layout.dialog_add_consumption,
+                    null
+                )
 
-        var selectedProduct: StockProducts? = null
+        val productSelectorCard =
+            dialogView.findViewById<MaterialCardView>(
+                R.id.productSelectorCard
+            )
+
+        val selectedProductText =
+            dialogView.findViewById<TextView>(
+                R.id.selectedProductText
+            )
+
+        val quantityInput =
+            dialogView.findViewById<EditText>(
+                R.id.quantityInput
+            )
+
+        val quantityLayout =
+            dialogView.findViewById<TextInputLayout>(
+                R.id.quantityLayout
+            )
+
+        val productInfoSection =
+            dialogView.findViewById<LinearLayout>(
+                R.id.productInfoSection
+            )
+
+        val unitPriceText =
+            dialogView.findViewById<TextView>(
+                R.id.unitPriceText
+            )
+
+        val stockQuantityText =
+            dialogView.findViewById<TextView>(
+                R.id.stockQuantityText
+            )
+
+        val totalPriceText =
+            dialogView.findViewById<TextView>(
+                R.id.totalPriceText
+            )
+
+        var selectedProduct:
+                StockProducts? = null
 
         productSelectorCard.setOnClickListener {
+
             showProductSelectionDialog { product ->
+
                 selectedProduct = product
-                selectedProductText.text = product.name
-                selectedProductText.setTextColor(android.graphics.Color.parseColor("#111827"))
 
-                productInfoSection.visibility = View.VISIBLE
-                unitPriceText.text = currencyFormat.format(product.unitPrice)
-                stockQuantityText.text = "${product.quantity} un"
+                selectedProductText.text =
+                    product.name
 
-                updateConsumptionTotal(quantityInput, product, totalPriceText)
+                productInfoSection.visibility =
+                    View.VISIBLE
+
+                unitPriceText.text =
+                    currencyFormat.format(
+                        product.unitPrice
+                    )
+
+                stockQuantityText.text =
+                    "${product.quantity} un"
+
+                updateConsumptionTotal(
+                    quantityInput,
+                    product,
+                    totalPriceText
+                )
             }
         }
 
-        quantityInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                selectedProduct?.let { product ->
-                    updateConsumptionTotal(quantityInput, product, totalPriceText)
+        quantityInput.addTextChangedListener(
+            object : TextWatcher {
+
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                }
+
+                override fun afterTextChanged(
+                    s: Editable?
+                ) {
+
+                    selectedProduct?.let {
+
+                        updateConsumptionTotal(
+                            quantityInput,
+                            it,
+                            totalPriceText
+                        )
+                    }
                 }
             }
-        })
+        )
 
-        val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("Adicionar Consumo")
-            .setView(dialogView)
-            .setPositiveButton("Adicionar", null)
-            .setNegativeButton("Cancelar", null)
-            .create()
+        val dialog =
+            AlertDialog.Builder(requireContext())
+                .setTitle("Adicionar Consumo")
+                .setView(dialogView)
+                .setPositiveButton(
+                    "Adicionar",
+                    null
+                )
+                .setNegativeButton(
+                    "Cancelar",
+                    null
+                )
+                .create()
 
         dialog.setOnShowListener {
-            val addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            addButton.setOnClickListener {
-                if (selectedProduct == null) {
-                    Toast.makeText(requireContext(), "Selecione um produto", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
 
-                val quantityStr = quantityInput.text.toString().trim()
-                if (quantityStr.isEmpty()) {
-                    quantityLayout.error = "Digite a quantidade"
-                    return@setOnClickListener
-                }
-
-                val quantity = quantityStr.toIntOrNull()
-                if (quantity == null || quantity <= 0) {
-                    quantityLayout.error = "Quantidade deve ser maior que zero"
-                    return@setOnClickListener
-                }
-
-                val product = selectedProduct!!
-
-                if (quantity > product.quantity) {
-                    quantityLayout.error = "Estoque insuficiente (${product.quantity} disponíveis)"
-                    return@setOnClickListener
-                }
-
-                val item = ConsumptionItem(
-                    id = UUID.randomUUID().toString(),
-                    productId = product.id,
-                    name = product.name,
-                    unitPrice = product.unitPrice,
-                    quantity = quantity
+            val addButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_POSITIVE
                 )
 
+            addButton.setOnClickListener {
+
+                if (selectedProduct == null) {
+
+                    Toast.makeText(
+                        requireContext(),
+                        "Selecione um produto",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@setOnClickListener
+                }
+
+                val quantity =
+                    quantityInput.text.toString()
+                        .toIntOrNull()
+
+                if (quantity == null || quantity <= 0) {
+
+                    quantityLayout.error =
+                        "Quantidade inválida"
+
+                    return@setOnClickListener
+                }
+
+                val product =
+                    selectedProduct!!
+
+                val item =
+                    ConsumptionItem(
+                        id = product.id,
+                        productId = product.id,
+                        name = product.name,
+                        unitPrice = product.unitPrice,
+                        quantity = quantity
+                    )
+
                 consumptionAdapter.addItem(item)
+
                 updateTotal()
+
                 dialog.dismiss()
             }
         }
@@ -336,263 +598,378 @@ class ConfirmAttendanceFragment : Fragment() {
         product: StockProducts,
         totalPriceText: TextView
     ) {
-        val quantityStr = quantityInput.text.toString().trim()
-        val quantity = quantityStr.toIntOrNull() ?: 0
-        val total = product.unitPrice * quantity
-        totalPriceText.text = currencyFormat.format(total)
+
+        val quantity =
+            quantityInput.text.toString()
+                .toIntOrNull() ?: 0
+
+        val total =
+            product.unitPrice * quantity
+
+        totalPriceText.text =
+            currencyFormat.format(total)
     }
 
+    private fun showProductSelectionDialog(
+        onProductSelected: (StockProducts) -> Unit
+    ) {
 
-    private fun showProductSelectionDialog(onProductSelected: (StockProducts) -> Unit) {
-        val dialogView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.dialog_select_product, null)
+        val dialogView =
+            LayoutInflater.from(requireContext())
+                .inflate(
+                    R.layout.dialog_select_product,
+                    null
+                )
 
-        val searchInput = dialogView.findViewById<EditText>(R.id.productSearchInput)
-        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.productsRecyclerView)
+        val searchInput =
+            dialogView.findViewById<EditText>(
+                R.id.productSearchInput
+            )
 
-        val adapter = ProductSelectionAdapter { product ->
-            onProductSelected(product)
-            productSelectionDialog?.dismiss()
-        }
+        val recyclerView =
+            dialogView.findViewById<RecyclerView>(
+                R.id.productsRecyclerView
+            )
 
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        val adapter =
+            ProductSelectionAdapter { product ->
+
+                onProductSelected(product)
+
+                productSelectionDialog?.dismiss()
+            }
+
+        recyclerView.layoutManager =
+            LinearLayoutManager(requireContext())
+
         recyclerView.adapter = adapter
 
         lifecycleScope.launch {
-            val result = productsRepository.getAllProducts()
+
+            val result =
+                productsRepository.getAllProducts()
+
             result.onSuccess { products ->
-                val sellableProducts = products.filter { it.type == ProductType.REVENDA }
-                adapter.submitList(sellableProducts)
+
+                adapter.submitList(
+                    products.filter {
+                        it.type == ProductType.REVENDA
+                    }
+                )
             }
         }
 
-        searchInput.addTextChangedListener(object : TextWatcher {
+        searchInput.addTextChangedListener(
+            object : TextWatcher {
 
-            override fun beforeTextChanged(
-                s: CharSequence?,
-                start: Int,
-                count: Int,
-                after: Int
-            ) {}
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
 
-            override fun onTextChanged(
-                s: CharSequence?,
-                start: Int,
-                before: Int,
-                count: Int
-            ) {}
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                }
 
-            override fun afterTextChanged(s: Editable?) {
+                override fun afterTextChanged(
+                    s: Editable?
+                ) {
 
-                val query = s.toString().trim()
+                    val query =
+                        s.toString()
 
-                lifecycleScope.launch {
+                    lifecycleScope.launch {
 
-                    productsRepository.getAllProducts()
-                        .onSuccess { products ->
+                        val result =
+                            productsRepository.searchProducts(
+                                query
+                            )
 
-                            val filteredProducts = products.filter {
+                        result.onSuccess {
 
-                                it.type == ProductType.REVENDA &&
-                                        it.name.contains(query, ignoreCase = true)
-                            }
-
-                            adapter.submitList(filteredProducts)
+                            adapter.submitList(it)
                         }
-                        .onFailure {
-
-                            Toast.makeText(
-                                requireContext(),
-                                it.message,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                    }
                 }
             }
-        })
+        )
 
-        productSelectionDialog = AlertDialog.Builder(requireContext())
-            .setTitle("Selecionar Produto")
-            .setView(dialogView)
-            .setNegativeButton("Cancelar", null)
-            .create()
+        productSelectionDialog =
+            AlertDialog.Builder(requireContext())
+                .setTitle("Selecionar Produto")
+                .setView(dialogView)
+                .setNegativeButton(
+                    "Cancelar",
+                    null
+                )
+                .create()
 
         productSelectionDialog?.show()
     }
 
+    private fun showServiceSelectionDialog() {
+
+        val dialogView =
+            LayoutInflater.from(requireContext())
+                .inflate(
+                    R.layout.dialog_select_service,
+                    null
+                )
+
+        val searchInput =
+            dialogView.findViewById<EditText>(
+                R.id.serviceSearchInput
+            )
+
+        val recyclerView =
+            dialogView.findViewById<RecyclerView>(
+                R.id.servicesRecyclerView
+            )
+
+        val adapter =
+            ServiceSelectionAdapter { service ->
+
+                serviceId = service.id
+                serviceName = service.name
+                servicePrice = service.price
+
+                serviceNameText.text =
+                    service.name
+
+                servicePriceText.text =
+                    currencyFormat.format(
+                        service.price
+                    )
+
+                totalServiceNameText.text =
+                    service.name
+
+                totalServicePriceText.text =
+                    currencyFormat.format(
+                        service.price
+                    )
+
+                updateTotal()
+
+                serviceSelectionDialog?.dismiss()
+            }
+
+        recyclerView.layoutManager =
+            LinearLayoutManager(requireContext())
+
+        recyclerView.adapter = adapter
+
+        lifecycleScope.launch {
+
+            val result =
+                servicesRepository.getAllServices()
+
+            result.onSuccess {
+
+                adapter.submitList(it)
+            }
+        }
+
+        searchInput.addTextChangedListener(
+            object : TextWatcher {
+
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                }
+
+                override fun afterTextChanged(
+                    s: Editable?
+                ) {
+
+                    lifecycleScope.launch {
+
+                        val result =
+                            servicesRepository.searchServices(
+                                s.toString()
+                            )
+
+                        result.onSuccess {
+
+                            adapter.submitList(it)
+                        }
+                    }
+                }
+            }
+        )
+
+        serviceSelectionDialog =
+            AlertDialog.Builder(requireContext())
+                .setTitle("Selecionar Serviço")
+                .setView(dialogView)
+                .setNegativeButton(
+                    "Cancelar",
+                    null
+                )
+                .create()
+
+        serviceSelectionDialog?.show()
+    }
+
     private fun updateTotal() {
-        val serviceValue = servicePrice
-        val consumptionTotal = consumptionAdapter.getTotal()
-        val finalTotal = serviceValue + consumptionTotal
-        grandTotalText.text = currencyFormat.format(finalTotal)
+
+        val total =
+            servicePrice +
+                    consumptionAdapter.getTotal()
+
+        grandTotalText.text =
+            currencyFormat.format(total)
     }
 
     private fun finalizarAtendimento() {
-        val record = AttendanceRecord(
-            id = UUID.randomUUID().toString(),
-            appointmentId = appointmentId,
-            clientId = clientId,
-            clientName = clientName,
-            serviceId = serviceId,
-            serviceName = serviceName,
-            servicePrice = servicePrice,
-            scheduledTime = System.currentTimeMillis(),
-            status = AttendanceStatus.ATTENDED,
-            consumptions = consumptionAdapter.getItems()
-        )
 
         finalizarButton.isEnabled = false
-        finalizarButton.text = "Finalizando..."
 
         lifecycleScope.launch {
-            delay(500)
 
-            AppointmentsManager.removeAppointment(appointmentId)
-            showSummaryDialog(record)
+            val result =
+                appointmentRepository.completeAppointment(
+                    appointmentId = appointmentId,
+                    status = currentStatus.name,
+                    consumptions =
+                    consumptionAdapter.getItems()
+                )
+
+            result.onSuccess { attendance ->
+
+                showSummaryDialog(attendance)
+            }
+
+            result.onFailure {
+
+                Toast.makeText(
+                    requireContext(),
+                    it.message,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
 
             finalizarButton.isEnabled = true
-            finalizarButton.text = "FINALIZAR ATENDIMENTO"
         }
     }
 
     private fun confirmarFalta() {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Confirmar Falta")
-            .setMessage("Confirmar que ${clientName} não compareceu?\n\nNenhum valor será cobrado.")
-            .setPositiveButton("Confirmar") { _, _ ->
-                val record = AttendanceRecord(
-                    id = UUID.randomUUID().toString(),
-                    appointmentId = appointmentId,
-                    clientId = clientId,
-                    clientName = clientName,
-                    serviceId = serviceId,
-                    serviceName = serviceName,
-                    servicePrice = servicePrice,
-                    scheduledTime = System.currentTimeMillis(),
-                    status = AttendanceStatus.NO_SHOW
-                )
 
-                lifecycleScope.launch {
-                    delay(300)
+        lifecycleScope.launch {
 
-                    AppointmentsManager.removeAppointment(appointmentId)
+            val result = appointmentRepository.completeAppointment(
+                appointmentId = appointmentId,
+                status = AttendanceStatus.NO_SHOW.name,
+                consumptions = emptyList()
+            )
 
-                    Toast.makeText(
-                        requireContext(),
-                        "Falta registrada para ${clientName}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+            result.onSuccess {
 
-                    parentFragmentManager.popBackStack()
-                }
+                Toast.makeText(
+                    requireContext(),
+                    "Falta confirmada",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                parentFragmentManager.popBackStack()
             }
-            .setNegativeButton("Cancelar", null)
-            .show()
+
+            result.onFailure { error ->
+
+                Toast.makeText(
+                    requireContext(),
+                    error.message ?: "Erro ao confirmar falta",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
-    private fun showSummaryDialog(record: AttendanceRecord) {
-        val dialogView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.dialog_attendance_summary, null)
+    private fun showSummaryDialog(
+        record: AttendanceRecord
+    ) {
 
-        val summaryMessageText = dialogView.findViewById<TextView>(R.id.summaryMessageText)
+        val dialogView =
+            LayoutInflater.from(requireContext())
+                .inflate(
+                    R.layout.dialog_attendance_summary,
+                    null
+                )
 
-        val consumptions = record.consumptions
-        val hasConsumptions = consumptions.isNotEmpty()
+        val summaryMessageText =
+            dialogView.findViewById<TextView>(
+                R.id.summaryMessageText
+            )
 
-        val message = buildString {
-            append("Atendimento registrado!\n\n")
-            append("Cliente: ${record.clientName}\n")
-            append("Serviço: ${record.serviceName}\n")
-            append("Valor: ${CurrencyUtils.format(record.servicePrice)}\n")  // ✅
+        val message =
+            buildString {
 
-            if (hasConsumptions) {
-                append("\n━━━━━━━━━━━━━━━━━━\n")
-                append("PRODUTOS ADICIONAIS:\n")
-                append("━━━━━━━━━━━━━━━━━━\n\n")
-                consumptions.forEach { item ->
-                    append("• ${item.name}\n")
-                    append("  ${CurrencyUtils.format(item.unitPrice * item.quantity)}\n\n")  // ✅
+                append("Cliente: ${record.clientName}\n")
+                append("Serviço: ${record.serviceName}\n")
+                append(
+                    "Valor Serviço: ${
+                        CurrencyUtils.format(
+                            record.servicePrice
+                        )
+                    }\n\n"
+                )
+
+                if (record.consumptions.isNotEmpty()) {
+
+                    append("Produtos:\n\n")
+
+                    record.consumptions.forEach {
+
+                        append(
+                            "${it.name} x${it.quantity}\n"
+                        )
+
+                        append(
+                            "${
+                                CurrencyUtils.format(
+                                    it.getTotal()
+                                )
+                            }\n\n"
+                        )
+                    }
                 }
-            }
 
-            append("━━━━━━━━━━━━━━━━━━\n")
-            append("TOTAL: ${CurrencyUtils.format(record.getTotalValue())}\n")  // ✅
-            append("━━━━━━━━━━━━━━━━━━")
-        }
+                append(
+                    "TOTAL: ${
+                        CurrencyUtils.format(
+                            record.getTotalValue()
+                        )
+                    }"
+                )
+            }
 
         summaryMessageText.text = message
 
         MaterialAlertDialogBuilder(requireContext())
             .setView(dialogView)
             .setPositiveButton("OK") { _, _ ->
+
                 parentFragmentManager.popBackStack()
             }
             .setCancelable(false)
             .show()
-    }
-
-    private fun showServiceSelectionDialog() {
-        val dialogView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.dialog_select_service, null)
-
-        val searchInput = dialogView.findViewById<EditText>(R.id.serviceSearchInput)
-        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.servicesRecyclerView)
-
-        val adapter = ServiceSelectionAdapter { service ->
-            serviceId = service.id
-            serviceName = service.name
-            servicePrice = service.price
-
-            serviceNameText.text = service.name
-            servicePriceText.text = currencyFormat.format(service.price)
-
-            updateTotalTexts()
-            updateTotal()
-
-            serviceSelectionDialog?.dismiss()
-
-            Toast.makeText(requireContext(), "Serviço atualizado!", Toast.LENGTH_SHORT).show()
-        }
-
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        recyclerView.adapter = adapter
-
-        lifecycleScope.launch {
-            val result = servicesRepository.getAllServices()
-            result.onSuccess { services ->
-                adapter.submitList(services)
-            }
-        }
-
-        searchInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s.toString().trim()
-                lifecycleScope.launch {
-                    val result = if (query.isNotEmpty()) {
-                        servicesRepository.searchServices(query)
-                    } else {
-                        servicesRepository.getAllServices()
-                    }
-                    result.onSuccess { services ->
-                        adapter.submitList(services)
-                    }
-                }
-            }
-        })
-
-        serviceSelectionDialog = AlertDialog.Builder(requireContext())
-            .setTitle("Trocar Serviço")
-            .setView(dialogView)
-            .setNegativeButton("Cancelar", null)
-            .create()
-
-        serviceSelectionDialog?.show()
-    }
-
-    private fun updateTotalTexts() {
-        totalServiceNameText.text = serviceName
-        totalServicePriceText.text = currencyFormat.format(servicePrice)
     }
 }

@@ -14,3 +14,6 @@
 .cxx
 local.properties
 app/src/main/java/com/example/barberpro/data/api/
+app/src/main/java/com/example/barberpro/repository
+app/src/main/java/com/example/barberpro/model
+app/src/main/java/com/example/barberpro/adapter
