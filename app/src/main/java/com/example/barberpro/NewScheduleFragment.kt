@@ -391,7 +391,8 @@ class NewScheduleFragment : Fragment() {
                 return
             }
 
-        if (horarioText.text.toString()
+        if (
+            horarioText.text.toString()
             == "Selecionar horário"
         ) {
 
@@ -423,6 +424,17 @@ class NewScheduleFragment : Fragment() {
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
+
+        // VALIDAÇÃO
+
+        if (startCalendar.before(Calendar.getInstance())) {
+
+            toast("Não é possível agendar horários passados")
+
+            agendarButton.isEnabled = true
+
+            return
+        }
 
         val appointment =
             Appointment(
@@ -459,6 +471,31 @@ class NewScheduleFragment : Fragment() {
 
             agendarButton.isEnabled = true
         }
+    }
+
+    private fun isPastDateTime(): Boolean {
+
+        val agora = Calendar.getInstance()
+
+        val agendamento = Calendar.getInstance().apply {
+
+            time = dataSelecionada?.time ?: return true
+
+            set(
+                Calendar.HOUR_OF_DAY,
+                horarioSelecionado.get(Calendar.HOUR_OF_DAY)
+            )
+
+            set(
+                Calendar.MINUTE,
+                horarioSelecionado.get(Calendar.MINUTE)
+            )
+
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        return agendamento.before(agora)
     }
 
     private fun toast(message: String) {
