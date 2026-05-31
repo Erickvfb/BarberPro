@@ -1,6 +1,8 @@
 package com.example.barberpro.ui.schedule
 
+import android.content.Context
 import android.os.Bundle
+import android.os.Parcel
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,12 +23,14 @@ import com.example.barberpro.repository.ClientsRepository
 import com.example.barberpro.repository.ServicesRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 
 class NewScheduleFragment : Fragment() {
 
@@ -234,9 +238,62 @@ class NewScheduleFragment : Fragment() {
 
     private fun selecionarData() {
 
+        val availableDays =
+            getAvailableDays()
+
+        if (availableDays.isEmpty()) {
+
+            toast("Defina um período de trabalho primeiro")
+            return
+        }
+
+        val constraints =
+            CalendarConstraints.Builder()
+                .setValidator(
+
+                    object : CalendarConstraints.DateValidator {
+
+                        override fun isValid(date: Long): Boolean {
+
+                            val utcCalendar =
+                                Calendar.getInstance(
+                                    TimeZone.getTimeZone("UTC")
+                                ).apply {
+                                    timeInMillis = date
+                                }
+
+                            val formatter =
+                                SimpleDateFormat(
+                                    "yyyy-MM-dd",
+                                    Locale.getDefault()
+                                ).apply {
+                                    timeZone =
+                                        TimeZone.getTimeZone("UTC")
+                                }
+
+                            val formattedDate =
+                                formatter.format(utcCalendar.time)
+
+                            return availableDays.contains(formattedDate)
+                        }
+
+                        override fun describeContents(): Int {
+                            return 0
+                        }
+
+                        override fun writeToParcel(
+                            dest: Parcel,
+                            flags: Int
+                        ) {
+                        }
+                    }
+                )
+                .build()
+
         val picker =
             MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Selecionar data")
+                .setCalendarConstraints(constraints)
                 .setSelection(
                     MaterialDatePicker.todayInUtcMilliseconds()
                 )
@@ -246,7 +303,7 @@ class NewScheduleFragment : Fragment() {
 
             val utcCalendar =
                 Calendar.getInstance(
-                    java.util.TimeZone.getTimeZone("UTC")
+                    TimeZone.getTimeZone("UTC")
                 ).apply {
 
                     timeInMillis = selection
@@ -276,16 +333,31 @@ class NewScheduleFragment : Fragment() {
                     set(Calendar.MILLISECOND, 0)
                 }
 
+            val formatter =
+                SimpleDateFormat(
+                    "yyyy-MM-dd",
+                    Locale.getDefault()
+                )
+
+            val selectedDate =
+                formatter.format(localCalendar.time)
+
+            if (!availableDays.contains(selectedDate)) {
+
+                toast("Data fora do período disponível")
+                return@addOnPositiveButtonClickListener
+            }
+
             dataSelecionada = localCalendar
 
-            val format =
+            val displayFormat =
                 SimpleDateFormat(
                     "dd/MM/yyyy",
                     Locale("pt", "BR")
                 )
 
             dataText.text =
-                format.format(localCalendar.time)
+                displayFormat.format(localCalendar.time)
 
             horarioText.text =
                 "Selecionar horário"
@@ -308,6 +380,24 @@ class NewScheduleFragment : Fragment() {
 
         lifecycleScope.launch {
 
+            val formatter =
+                SimpleDateFormat(
+                    "yyyy-MM-dd",
+                    Locale.getDefault()
+                )
+
+            val selectedDateString =
+                formatter.format(data.time)
+
+            val availableDays =
+                getAvailableDays()
+
+            if (!availableDays.contains(selectedDateString)) {
+
+                toast("Data fora do período de trabalho")
+                return@launch
+            }
+
             val horariosOcupados =
                 appointmentRepository
                     .getBookedSlotsForDay(
@@ -317,11 +407,31 @@ class NewScheduleFragment : Fragment() {
             val config =
                 BarberConfig.getInstance()
 
+            val schedule =
+                config.workingDays[
+                    data.get(Calendar.DAY_OF_WEEK)
+                ]
+
+            if (
+                schedule == null ||
+                !schedule.enabled
+            ) {
+
+                toast(
+                    "Barbearia fechada neste dia"
+                )
+
+                return@launch
+            }
+
+            val dayOfWeek =
+                data.get(Calendar.DAY_OF_WEEK)
+
             val horarios =
-                TimeSlotGenerator.generate(config)
-                    .filterNot {
-                        horariosOcupados.contains(it)
-                    }
+                TimeSlotGenerator.generate(
+                    dayOfWeek,
+                    config
+                )
 
             if (horarios.isEmpty()) {
 
@@ -400,6 +510,24 @@ class NewScheduleFragment : Fragment() {
             return
         }
 
+        val formatter =
+            SimpleDateFormat(
+                "yyyy-MM-dd",
+                Locale.getDefault()
+            )
+
+        val selectedDateString =
+            formatter.format(data.time)
+
+        val availableDays =
+            getAvailableDays()
+
+        if (!availableDays.contains(selectedDateString)) {
+
+            toast("Data fora do período de trabalho")
+            return
+        }
+
         agendarButton.isEnabled = false
 
         val startCalendar =
@@ -424,8 +552,6 @@ class NewScheduleFragment : Fragment() {
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
-
-        // VALIDAÇÃO
 
         if (startCalendar.before(Calendar.getInstance())) {
 
@@ -473,29 +599,79 @@ class NewScheduleFragment : Fragment() {
         }
     }
 
-    private fun isPastDateTime(): Boolean {
+    private fun getAvailableDays(): Set<String> {
 
-        val agora = Calendar.getInstance()
-
-        val agendamento = Calendar.getInstance().apply {
-
-            time = dataSelecionada?.time ?: return true
-
-            set(
-                Calendar.HOUR_OF_DAY,
-                horarioSelecionado.get(Calendar.HOUR_OF_DAY)
+        val prefs =
+            requireContext().getSharedPreferences(
+                "agenda_prefs",
+                Context.MODE_PRIVATE
             )
 
-            set(
-                Calendar.MINUTE,
-                horarioSelecionado.get(Calendar.MINUTE)
+        val startDate =
+            prefs.getString("start_date", null)
+                ?: return emptySet()
+
+        val endDate =
+            prefs.getString("end_date", null)
+                ?: return emptySet()
+
+        val formatter =
+            SimpleDateFormat(
+                "yyyy-MM-dd",
+                Locale.getDefault()
             )
 
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
+        val start =
+            formatter.parse(startDate)
+                ?: return emptySet()
+
+        val end =
+            formatter.parse(endDate)
+                ?: return emptySet()
+
+        val config =
+            BarberConfig.getInstance()
+
+        val calendar =
+            Calendar.getInstance()
+
+        calendar.time = start
+
+        val endCalendar =
+            Calendar.getInstance()
+
+        endCalendar.time = end
+
+        val result =
+            mutableSetOf<String>()
+
+        while (!calendar.after(endCalendar)) {
+
+            val dayOfWeek =
+                calendar.get(Calendar.DAY_OF_WEEK)
+
+            val schedule =
+                config.workingDays[dayOfWeek]
+
+            if (
+                schedule != null &&
+                schedule.enabled
+            ) {
+
+                result.add(
+                    formatter.format(
+                        calendar.time
+                    )
+                )
+            }
+
+            calendar.add(
+                Calendar.DAY_OF_MONTH,
+                1
+            )
         }
 
-        return agendamento.before(agora)
+        return result
     }
 
     private fun toast(message: String) {

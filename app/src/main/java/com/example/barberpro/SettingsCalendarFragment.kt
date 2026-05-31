@@ -13,6 +13,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
 import com.example.barberpro.model.BarberConfig
+import com.example.barberpro.model.DaySchedule
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import java.util.*
@@ -101,6 +102,7 @@ class SettingsCalendarFragment : Fragment() {
         almocoSwitch.isChecked = config.hasLunchBreak
         almocoInicioText.text = String.format("%02d:%02d", config.lunchStartHour, config.lunchStartMinute)
         almocoFimText.text = String.format("%02d:%02d", config.lunchEndHour, config.lunchEndMinute)
+        atualizarHorariosNaTela(config)
 
         updateLunchCardsState(config.hasLunchBreak)
     }
@@ -238,10 +240,28 @@ class SettingsCalendarFragment : Fragment() {
 
         salvarButton.setOnClickListener {
             if (isFechado) {
-                horarios[dia] = Pair("Fechado", "Fechado")
-                textView.text = "Fechado"
+
+                val config =
+                    BarberConfig.getInstance()
+
+                config.workingDays[
+                    getCalendarDay(dia)
+                ] = DaySchedule(
+                    enabled = false
+                )
+
+                BarberConfig.updateInstance(config)
+
+                horarios[dia] =
+                    Pair("Fechado", "Fechado")
+
+                textView.text =
+                    "Fechado"
+
                 textView.setTextColor(Color.RED)
+
                 dialog.dismiss()
+
                 return@setOnClickListener
             }
 
@@ -263,7 +283,33 @@ class SettingsCalendarFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            horarios[dia] = Pair(inicio, fim)
+            val config =
+                BarberConfig.getInstance()
+
+            config.workingDays[
+                getCalendarDay(dia)
+            ] = DaySchedule(
+
+                enabled = true,
+
+                startHour =
+                inicioSplit[0].toInt(),
+
+                startMinute =
+                inicioSplit[1].toInt(),
+
+                endHour =
+                fimSplit[0].toInt(),
+
+                endMinute =
+                fimSplit[1].toInt()
+            )
+
+            BarberConfig.updateInstance(config)
+
+            horarios[dia] =
+                Pair(inicio, fim)
+
             textView.text = "$inicio - $fim"
             textView.setTextColor(Color.GRAY)
 
@@ -285,5 +331,113 @@ class SettingsCalendarFragment : Fragment() {
             currentMinute,
             true
         ).show()
+    }
+
+    private fun getCalendarDay(
+        dia: String
+    ): Int {
+
+        return when (dia) {
+
+            "Segunda-feira" ->
+                Calendar.MONDAY
+
+            "Terça-feira" ->
+                Calendar.TUESDAY
+
+            "Quarta-feira" ->
+                Calendar.WEDNESDAY
+
+            "Quinta-feira" ->
+                Calendar.THURSDAY
+
+            "Sexta-feira" ->
+                Calendar.FRIDAY
+
+            "Sábado" ->
+                Calendar.SATURDAY
+
+            else ->
+                Calendar.SUNDAY
+        }
+    }
+
+    private fun atualizarHorariosNaTela(
+        config: BarberConfig
+    ) {
+
+        atualizarDia(
+            config,
+            Calendar.MONDAY,
+            segundaHorarioText
+        )
+
+        atualizarDia(
+            config,
+            Calendar.TUESDAY,
+            tercaHorarioText
+        )
+
+        atualizarDia(
+            config,
+            Calendar.WEDNESDAY,
+            quartaHorarioText
+        )
+
+        atualizarDia(
+            config,
+            Calendar.THURSDAY,
+            quintaHorarioText
+        )
+
+        atualizarDia(
+            config,
+            Calendar.FRIDAY,
+            sextaHorarioText
+        )
+
+        atualizarDia(
+            config,
+            Calendar.SATURDAY,
+            sabadoHorarioText
+        )
+
+        atualizarDia(
+            config,
+            Calendar.SUNDAY,
+            domingoHorarioText
+        )
+    }
+
+    private fun atualizarDia(
+        config: BarberConfig,
+        day: Int,
+        textView: TextView
+    ) {
+
+        val schedule =
+            config.workingDays[day]
+
+        if (
+            schedule == null ||
+            !schedule.enabled
+        ) {
+
+            textView.text = "Fechado"
+            textView.setTextColor(Color.RED)
+
+            return
+        }
+
+        textView.text =
+            String.format(
+                "%02d:%02d - %02d:%02d",
+                schedule.startHour,
+                schedule.startMinute,
+                schedule.endHour,
+                schedule.endMinute
+            )
+
+        textView.setTextColor(Color.GRAY)
     }
 }

@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark"
-    tools:context=".MainActivity">
+    tools:context=".HomeFragment">
 
     <!-- Header -->
     <LinearLayout
@@ -65,43 +66,37 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/defineAgendaButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Definição de horário"
             android:textSize="12sp"
             android:textColor="@color/gold"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
             app:icon="@drawable/ic_calendar"
             app:iconTint="@color/gold"
             app:iconSize="16dp" />
     </LinearLayout>
 
-    <!-- Week Calendar -->
-
-    <!-- Summary Cards -->
-    <HorizontalScrollView
-        android:id="@+id/weekCalendarScroll"
+    <!-- Horizontal Days List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/daysRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
         android:scrollbars="none"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@id/dateRangeLayout"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/dateRangeLayout">
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:listitem="@layout/item_available_day"
+        tools:orientation="horizontal" />
 
-        <LinearLayout
-            android:id="@+id/weekDaysContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
-            <!-- Days will be added programmatically -->
-        </LinearLayout>
-
-    </HorizontalScrollView>
-
+    <!-- Summary Cards -->
     <LinearLayout
         android:id="@+id/summaryLayout"
         android:layout_width="match_parent"
@@ -110,7 +105,7 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="12dp"
         android:gravity="center"
-        app:layout_constraintTop_toBottomOf="@id/weekCalendarScroll">
+        app:layout_constraintTop_toBottomOf="@id/daysRecyclerView">
 
         <TextView
             android:id="@+id/servicesCountText"
@@ -145,8 +140,6 @@
     </LinearLayout>
 
     <!-- Appointments List -->
-
-    <!-- Floating Action Button -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/appointmentsRecyclerView"
         android:layout_width="match_parent"
@@ -155,12 +148,11 @@
         android:paddingHorizontal="16dp"
         android:paddingBottom="80dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/summaryLayout"
-        app:layout_constraintVertical_bias="0.0"
-        tools:layout_editor_absoluteX="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         tools:listitem="@layout/item_appointment" />
 
+    <!-- Floating Action Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddAppointment"
         android:layout_width="wrap_content"
@@ -170,7 +162,8 @@
         android:contentDescription="Adicionar agendamento"
         android:src="@drawable/ic_add"
         app:backgroundTint="@android:color/white"
+        app:tint="@color/background_dark"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:tint="@color/background_dark" />
+        app:layout_constraintEnd_toEndOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

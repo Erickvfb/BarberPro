@@ -1,29 +1,84 @@
 package com.example.barberpro.model
 
-/**
- * Configuração única da barbearia
- * Horário de funcionamento + Horário de almoço
- */
+import java.util.Calendar
+
+data class DaySchedule(
+
+    var enabled: Boolean = true,
+
+    var startHour: Int = 8,
+    var startMinute: Int = 0,
+
+    var endHour: Int = 18,
+    var endMinute: Int = 0
+)
+
 data class BarberConfig(
-    // Horário de funcionamento
-    val openingHour: Int = 9,
-    val closingHour: Int = 18,
-    val slotDurationMinutes: Int = 30,
 
-    // Horário de almoço
-    val hasLunchBreak: Boolean = true,
-    val lunchStartHour: Int = 12,
-    val lunchStartMinute: Int = 0,
-    val lunchEndHour: Int = 13,
-    val lunchEndMinute: Int = 0
+    var workingDays: MutableMap<Int, DaySchedule> = mutableMapOf(
+
+        Calendar.MONDAY to DaySchedule(
+            enabled = true,
+            startHour = 8,
+            endHour = 19
+        ),
+
+        Calendar.TUESDAY to DaySchedule(
+            enabled = true,
+            startHour = 8,
+            endHour = 19
+        ),
+
+        Calendar.WEDNESDAY to DaySchedule(
+            enabled = true,
+            startHour = 8,
+            endHour = 19
+        ),
+
+        Calendar.THURSDAY to DaySchedule(
+            enabled = true,
+            startHour = 8,
+            endHour = 19
+        ),
+
+        Calendar.FRIDAY to DaySchedule(
+            enabled = true,
+            startHour = 8,
+            endHour = 19
+        ),
+
+        Calendar.SATURDAY to DaySchedule(
+            enabled = true,
+            startHour = 8,
+            endHour = 18
+        ),
+
+        Calendar.SUNDAY to DaySchedule(
+            enabled = false
+        )
+    ),
+
+    var slotDurationMinutes: Int = 30,
+
+    var hasLunchBreak: Boolean = true,
+
+    var lunchStartHour: Int = 12,
+    var lunchStartMinute: Int = 0,
+
+    var lunchEndHour: Int = 13,
+    var lunchEndMinute: Int = 0
 ) {
+
     companion object {
-        // Instância única que será usada em todo o app
-        private var instance: BarberConfig = BarberConfig()
 
-        fun getInstance() = instance
+        private var instance = BarberConfig()
 
-        fun updateInstance(config: BarberConfig) {
+        fun getInstance(): BarberConfig =
+            instance
+
+        fun updateInstance(
+            config: BarberConfig
+        ) {
             instance = config
         }
     }

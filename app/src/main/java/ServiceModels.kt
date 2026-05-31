@@ -79,6 +79,6 @@ data class CalendarDay(
     val date: Date,
     val dayOfWeek: String,
     val dayOfMonth: Int,
-    val isSelected: Boolean = false,
-    val isToday: Boolean = false
+    val isSelected: Boolean,
+    val isAvailable: Boolean
 )
