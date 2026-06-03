@@ -13,6 +13,8 @@
         android:layout_margin="16dp"
         android:hint="Buscar serviço..."
         android:textSize="14sp"
+        android:textColor="#000000"
+        android:textColorHint="#808080"
         android:paddingHorizontal="16dp"
         android:background="@drawable/bg_input"
         android:drawableStart="@drawable/ic_search"

@@ -15,11 +15,40 @@ class ServiceSelectionAdapter(
 ) : RecyclerView.Adapter<ServiceSelectionAdapter.ViewHolder>() {
 
     private val services = mutableListOf<Service>()
+    private val allServices = mutableListOf<Service>()
     private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
 
     fun submitList(newServices: List<Service>) {
+
+        allServices.clear()
+        allServices.addAll(newServices)
+
         services.clear()
         services.addAll(newServices)
+
+        notifyDataSetChanged()
+    }
+
+    fun filter(query: String) {
+
+        services.clear()
+
+        if (query.isBlank()) {
+
+            services.addAll(allServices)
+
+        } else {
+
+            services.addAll(
+                allServices.filter {
+                    it.name.contains(
+                        query,
+                        ignoreCase = true
+                    )
+                }
+            )
+        }
+
         notifyDataSetChanged()
     }
 
@@ -48,4 +77,6 @@ class ServiceSelectionAdapter(
             }
         }
     }
+
+
 }
