@@ -3,6 +3,7 @@ package com.example.barberpro
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -154,19 +155,37 @@ class ClientProfileFragment : Fragment() {
         emailText.text = client.email
     }
 
+
     private fun loadHistory() {
-        val history = listOf(
-            ClientHistory(
-                id = "1",
-                clientId = client.id,
-                serviceId = "1",
-                serviceName = "Corte Social",
-                date = System.currentTimeMillis() - (5 * 24 * 60 * 60 * 1000),
-                price = 46.80,
-                iconRes = R.drawable.ic_scissors
-            )
-        )
-        historyAdapter.submitList(history)
+        lifecycleScope.launch {
+            Log.d("CLIENT_PROFILE", "Carregando histórico...")
+
+            val result = repository.getClientHistory(client.id)
+
+            result.onSuccess { historyList ->
+
+                Log.d("CLIENT_PROFILE", " ${historyList.size} registros")
+
+                historyAdapter.submitList(historyList)
+
+                val totalSpent = historyList.sumOf { it.price }
+
+                val visitCount = historyList.size
+
+                // atualizar cliente local
+                client = client.copy(
+                    totalSpent = totalSpent,
+                    visitCount = visitCount
+                )
+
+                updateUI()
+            }
+
+            result.onFailure { error ->
+                Log.e("CLIENT_PROFILE_ERROR", "Erro: ${error.message}")
+                historyAdapter.submitList(emptyList())
+            }
+        }
     }
 
     // Chamadas externas

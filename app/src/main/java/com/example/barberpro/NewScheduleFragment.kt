@@ -34,6 +34,7 @@ import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.text.Editable
 import android.text.TextWatcher
+import com.example.barberpro.adapter.ClientesAdapter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -117,49 +118,118 @@ class NewScheduleFragment : Fragment() {
         }
     }
 
-    /**
-     * Selecionar cliente
-     * Busca todos os clientes e abre dialog para selecionar
-     */
+
     private fun selecionarCliente() {
+
         lifecycleScope.launch {
+
             Log.d("SCHEDULE", "Buscando clientes...")
 
             val result = clientsRepository.getAllClients()
 
             result.onSuccess { clientes ->
-                Log.d("SCHEDULE", " ${clientes.size} clientes carregados")
+
+                Log.d("SCHEDULE", "${clientes.size} clientes carregados")
 
                 if (clientes.isEmpty()) {
+
                     toast("Nenhum cliente cadastrado")
                     return@onSuccess
                 }
 
-                // Mapear nomes para exibição
-                val nomes = clientes.map { it.name }.toTypedArray()
-
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Selecionar Cliente")
-                    .setItems(nomes) { _, which ->
-                        clienteSelecionado = clientes[which]
-                        clienteSelecionadoText.text = clientes[which].name
-                        Log.d("SCHEDULE", " Cliente selecionado: ${clientes[which].name}")
-                    }
-                    .setNegativeButton("Cancelar", null)
-                    .show()
+                showClientSelectionDialog(clientes)
             }
 
             result.onFailure { error ->
-                Log.e("SCHEDULE_ERROR", "Erro ao carregar clientes: ${error.message}")
-                toast(error.message ?: "Erro ao carregar clientes")
+
+                Log.e(
+                    "SCHEDULE_ERROR",
+                    "Erro ao carregar clientes: ${error.message}"
+                )
+
+                toast(
+                    error.message
+                        ?: "Erro ao carregar clientes"
+                )
             }
         }
     }
 
-    /**
-     * Selecionar serviço
-     * Busca todos os serviços e abre dialog para selecionar
-     */
+    private fun showClientSelectionDialog(
+        clients: List<Client>
+    ) {
+
+        val dialogView = LayoutInflater
+            .from(requireContext())
+            .inflate(
+                R.layout.dialog_select_client,
+                null
+            )
+
+        val searchInput =
+            dialogView.findViewById<EditText>(
+                R.id.clientSearchInput
+            )
+
+        val recyclerView =
+            dialogView.findViewById<RecyclerView>(
+                R.id.clientsRecyclerView
+            )
+
+        recyclerView.layoutManager =
+            LinearLayoutManager(requireContext())
+
+
+        val dialog = AlertDialog.Builder(
+            requireContext()
+        )
+            .setView(dialogView)
+            .create()
+
+        val adapter = ClientesAdapter.ClientSelectionAdapter { client ->
+
+            clienteSelecionado = client
+
+            clienteSelecionadoText.text =
+                client.name
+
+            dialog.dismiss()
+        }
+
+        adapter.submitList(clients)
+
+
+        recyclerView.adapter = adapter
+
+        searchInput.addTextChangedListener(
+            object : TextWatcher {
+
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {}
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                    adapter.filter(s.toString())
+                }
+
+                override fun afterTextChanged(
+                    s: Editable?
+                ) {}
+            }
+        )
+
+        dialog.show()
+    }
+
+
     private fun selecionarServico() {
 
         lifecycleScope.launch {

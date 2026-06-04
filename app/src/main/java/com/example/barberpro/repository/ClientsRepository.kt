@@ -1,11 +1,16 @@
 package com.example.barberpro.repository
 
+import android.util.Log
+import com.example.barberpro.R
 import com.example.barberpro.data.api.ApiService
 import com.example.barberpro.data.api.ClientRequest
 import com.example.barberpro.data.api.RetrofitClient
 import com.example.barberpro.model.Client
+import com.example.barberpro.model.ClientHistory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 /**
  * Repository for client management
@@ -42,9 +47,7 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Search clients by name or phone
-     */
+
     suspend fun searchClients(query: String): Result<List<Client>> = withContext(Dispatchers.IO) {
         return@withContext try {
             val response = apiService.getClients(search = query)
@@ -63,9 +66,7 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Get client by ID
-     */
+
     suspend fun getClientById(id: String): Result<Client> = withContext(Dispatchers.IO) {
         return@withContext try {
             val response = apiService.getClient(id)
@@ -87,9 +88,7 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Add new client
-     */
+
     suspend fun addClient(client: Client): Result<Client> = withContext(Dispatchers.IO) {
         return@withContext try {
             val request = ClientRequest(
@@ -117,9 +116,7 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Update client
-     */
+
     suspend fun updateClient(client: Client): Result<Client> = withContext(Dispatchers.IO) {
         return@withContext try {
             val request = ClientRequest(
@@ -147,9 +144,7 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Delete client
-     */
+
     suspend fun deleteClient(clientId: String): Result<Boolean> = withContext(Dispatchers.IO) {
         return@withContext try {
             val response = apiService.deleteClient(clientId)
@@ -164,10 +159,7 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Get frequent clients
-     * Retorna os primeiros 20 clientes ordenados por nome
-     */
+
     suspend fun getFrequentClients(): Result<List<Client>> = withContext(Dispatchers.IO) {
         return@withContext try {
             val response = apiService.getClients()
@@ -187,10 +179,9 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Get inactive clients
-     * TODO: Implementar lógica de clientes inativos no backend
-     */
+
+     //TODO: Implementar lógica de clientes inativos no backend
+
     suspend fun getInactiveClients(): Result<List<Client>> = withContext(Dispatchers.IO) {
         return@withContext try {
             // Por enquanto retorna lista vazia
@@ -201,10 +192,6 @@ class ClientsRepository private constructor(
         }
     }
 
-    /**
-     * Get new clients
-     * Retorna os últimos 10 clientes
-     */
     suspend fun getNewClients(): Result<List<Client>> = withContext(Dispatchers.IO) {
         return@withContext try {
             val response = apiService.getClients()
@@ -223,6 +210,111 @@ class ClientsRepository private constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun getClientHistory(clientId: String): Result<List<ClientHistory>> =
+        withContext(Dispatchers.IO) {
+            return@withContext try {
+                Log.d("CLIENTS_REPO", "Buscando histórico do cliente: $clientId")
+
+                // 1. Chamar API
+                val response = RetrofitClient.apiService.getClientHistory(clientId)
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    // 2. Obter AttendanceRecordResponse do backend
+                    val attendanceRecords = response.body()!!.data
+
+                    Log.d("CLIENTS_REPO", "${attendanceRecords.size} registros encontrados na API")
+
+                    // 3. Mapear AttendanceRecordResponse → ClientHistory
+                    val clientHistoryList = attendanceRecords.mapNotNull { record ->
+                        try {
+                            // Extrair informações do serviço
+                            val serviceName = record.services?.name ?: "Serviço"
+                            val servicePrice = record.service_price ?: record.services?.price ?: 0.0
+
+                            // Converter data do backend (ISO 8601)
+                            val date = parseBackendDate(record.finished_at ?: record.created_at)
+
+                            // Selecionar ícone baseado no nome do serviço
+                            val iconRes = selectIconForService(serviceName)
+
+                            Log.d("CLIENTS_REPO",
+                                "Mapeado: $serviceName - R$ $servicePrice")
+
+                            ClientHistory(
+                                id = record.id ?: "",
+                                clientId = record.client_id ?: "",
+                                serviceId = record.service_id ?: "",
+                                serviceName = serviceName,
+                                date = date,
+                                price = servicePrice,
+                                iconRes = iconRes
+                            )
+                        } catch (e: Exception) {
+                            Log.e("CLIENTS_REPO", "Erro ao mapear registro: ${e.message}")
+                            null
+                        }
+                    }
+
+                    Log.d("CLIENTS_REPO", " ${clientHistoryList.size} históricos mapeados com sucesso")
+
+                    if (clientHistoryList.isEmpty()) {
+                        Log.d("CLIENTS_REPO", "Cliente não possui histórico de atendimentos")
+                    }
+
+                    // 4. Retornar ClientHistory para o Fragment
+                    Result.success(clientHistoryList)
+                } else {
+                    val errorMsg = response.body()?.message ?: response.message()
+                    Log.e("CLIENTS_REPO_ERROR", "Erro na resposta: $errorMsg")
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Log.e("CLIENTS_REPO_ERROR", "Exceção ao buscar histórico: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
+
+
+    private fun parseBackendDate(dateString: String?): Long {
+        if (dateString.isNullOrEmpty()) {
+            return System.currentTimeMillis()
+        }
+
+        return try {
+            // Limpar timezone
+            val cleanDate = dateString
+                .replace("+00:00", "")
+                .replace("Z", "")
+                .replace("z", "")
+
+            // Formato ISO 8601
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            val date = dateFormat.parse(cleanDate)
+
+            date?.time ?: System.currentTimeMillis()
+        } catch (e: Exception) {
+            Log.w("DATE_PARSER", "Erro ao parsear data: $dateString - ${e.message}")
+            System.currentTimeMillis()
+        }
+    }
+
+    /**
+     * Selecionar ícone apropriado baseado no nome do serviço
+     */
+    private fun selectIconForService(serviceName: String): Int {
+        val name = serviceName.lowercase()
+
+        return when {
+            name.contains("corte") -> com.example.barberpro.R.drawable.ic_scissors
+            name.contains("barba") -> com.example.barberpro.R.drawable.ic_scissors
+            name.contains("cabelo") -> com.example.barberpro.R.drawable.ic_scissors
+            name.contains("combo") -> com.example.barberpro.R.drawable.ic_scissors
+            name.contains("limpeza") -> com.example.barberpro.R.drawable.ic_scissors
+            else -> com.example.barberpro.R.drawable.ic_scissors // Padrão
+        }
+    }
+
 
     companion object {
         @Volatile

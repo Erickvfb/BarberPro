@@ -1,5 +1,6 @@
 package com.example.barberpro.adapter
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -135,6 +136,103 @@ class ClientesAdapter(
                 "(${phone.substring(0, 2)}) ${phone.substring(2, 7)}-${phone.substring(7)}"
             } else {
                 phone
+            }
+        }
+    }
+
+    class ClientSelectionAdapter(
+        private val onClientClick: (Client) -> Unit
+    ) : RecyclerView.Adapter<ClientSelectionAdapter.ViewHolder>() {
+
+        private val clients = mutableListOf<Client>()
+        private val filteredClients = mutableListOf<Client>()
+
+        fun submitList(list: List<Client>) {
+
+            clients.clear()
+            clients.addAll(list)
+
+            filteredClients.clear()
+            filteredClients.addAll(list)
+
+            notifyDataSetChanged()
+        }
+
+        fun filter(query: String) {
+
+            filteredClients.clear()
+
+            if (query.isBlank()) {
+
+                filteredClients.addAll(clients)
+
+            } else {
+
+                filteredClients.addAll(
+                    clients.filter {
+                        it.name.contains(
+                            query,
+                            ignoreCase = true
+                        )
+                    }
+                )
+            }
+
+            notifyDataSetChanged()
+        }
+
+        override fun getItemCount() = filteredClients.size
+
+        override fun onCreateViewHolder(
+            parent: ViewGroup,
+            viewType: Int
+        ): ViewHolder {
+
+            val view = LayoutInflater
+                .from(parent.context)
+                .inflate(
+                    R.layout.item_client_selection,
+                    parent,
+                    false
+                )
+
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(
+            holder: ViewHolder,
+            position: Int
+        ) {
+
+            holder.bind(filteredClients[position])
+        }
+
+        inner class ViewHolder(
+            itemView: View
+        ) : RecyclerView.ViewHolder(itemView) {
+
+            private val nameText =
+                itemView.findViewById<TextView>(
+                    R.id.clientNameText
+                )
+
+            private val phoneText =
+                itemView.findViewById<TextView>(
+                    R.id.clientPhoneText
+                )
+
+            fun bind(client: Client) {
+
+               itemView.findViewById<TextView>(R.id.avatarInitial)
+                    .text = client.getInitial()
+
+                nameText.text = client.name
+
+                phoneText.text = client.phone ?: "Sem telefone"
+
+                itemView.setOnClickListener {
+                    onClientClick(client)
+                }
             }
         }
     }
