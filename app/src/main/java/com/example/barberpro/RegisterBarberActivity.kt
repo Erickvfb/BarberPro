@@ -26,6 +26,8 @@ class RegisterBarberActivity : AppCompatActivity() {
     private lateinit var emailInput: TextInputEditText
     private lateinit var senhaLayout: TextInputLayout
     private lateinit var senhaInput: TextInputEditText
+    private lateinit var confirmarSenhaLayout: TextInputLayout
+    private lateinit var confirmarSenhaInput: TextInputEditText
     private lateinit var cadastrarButton: MaterialButton
     private lateinit var loginLink: TextView
 
@@ -47,6 +49,8 @@ class RegisterBarberActivity : AppCompatActivity() {
         emailInput = findViewById(R.id.emailInput)
         senhaLayout = findViewById(R.id.senhaLayout)
         senhaInput = findViewById(R.id.senhaInput)
+        confirmarSenhaLayout = findViewById(R.id.confirmarSenhaLayout)
+        confirmarSenhaInput = findViewById(R.id.confirmarSenhaInput)
         cadastrarButton = findViewById(R.id.cadastrarButton)
         loginLink = findViewById(R.id.loginLink)
     }
@@ -70,15 +74,13 @@ class RegisterBarberActivity : AppCompatActivity() {
         val nome = nomeInput.text.toString().trim()
         val email = emailInput.text.toString().trim()
         val senha = senhaInput.text.toString()
+        val confirmarSenha = confirmarSenhaInput.text.toString()
 
         val phoneInputText = ""
-
-        //limpa e trata telefone
         val phoneLimpo = phoneInputText.replace(Regex("[^\\d]"), "")
-
         val phoneFinal = if (phoneLimpo.isEmpty()) null else phoneLimpo
 
-        if (!validateInputs(barbeariaNome, nome, email, senha)) return
+        if (!validateInputs(barbeariaNome, nome, email, senha, confirmarSenha)) return
 
         cadastrarButton.isEnabled = false
         cadastrarButton.text = "Criando conta..."
@@ -88,7 +90,7 @@ class RegisterBarberActivity : AppCompatActivity() {
             password = senha,
             full_name = nome,
             barbershop_name = barbeariaNome,
-            phone = phoneFinal //pode ser null
+            phone = phoneFinal
         )
 
         lifecycleScope.launch {
@@ -138,8 +140,10 @@ class RegisterBarberActivity : AppCompatActivity() {
         barbeariaNome: String,
         nome: String,
         email: String,
-        senha: String
+        senha: String,
+        confirmarSenha: String
     ): Boolean {
+
         var isValid = true
 
         if (barbeariaNome.isEmpty()) {
@@ -167,6 +171,16 @@ class RegisterBarberActivity : AppCompatActivity() {
             senhaLayout.error = "Mínimo 8 caracteres"
             isValid = false
         } else senhaLayout.error = null
+
+        if (confirmarSenha.isEmpty()) {
+            confirmarSenhaLayout.error = "Confirme sua senha"
+            isValid = false
+        } else if (confirmarSenha != senha) {
+            confirmarSenhaLayout.error = "As senhas não coincidem"
+            isValid = false
+        } else {
+            confirmarSenhaLayout.error = null
+        }
 
         return isValid
     }
