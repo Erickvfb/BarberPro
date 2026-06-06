@@ -84,11 +84,14 @@ class ProfileFragment : Fragment() {
         }
 
         changePasswordCard.setOnClickListener {
-            Toast.makeText(
-                requireContext(),
-                "Funcionalidade em breve",
-                Toast.LENGTH_SHORT
-            ).show()
+
+            val fragment = ChangePasswordFragment()
+
+            parentFragmentManager
+                .beginTransaction()
+                .replace(R.id.fragmentContainer, fragment)
+                .addToBackStack(null)
+                .commit()
         }
 
         editBarbeariaButton.setOnClickListener {
