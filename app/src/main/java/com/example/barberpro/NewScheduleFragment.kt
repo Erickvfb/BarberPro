@@ -398,10 +398,6 @@ class NewScheduleFragment : Fragment() {
         picker.show(parentFragmentManager, "DATE_PICKER")
     }
 
-    /**
-     * Selecionar horário
-     * Busca horários disponíveis para o dia selecionado
-     */
     private fun selecionarHorario() {
         val data = dataSelecionada ?: run {
             toast("Selecione uma data primeiro")
@@ -421,6 +417,12 @@ class NewScheduleFragment : Fragment() {
                 return@launch
             }
 
+            val horariosOcupados =
+                appointmentRepository
+                    .getBookedSlotsForDay(
+                        data.time
+                    )
+
             val config = BarberConfig.getInstance()
             val dayOfWeek = data.get(Calendar.DAY_OF_WEEK)
 
@@ -432,7 +434,11 @@ class NewScheduleFragment : Fragment() {
             }
 
             // Gerar horários disponíveis
-            val horarios = TimeSlotGenerator.generate(dayOfWeek, config)
+            val horarios =
+                TimeSlotGenerator.generate(dayOfWeek)
+                    .filterNot {
+                        horariosOcupados.contains(it)
+                    }
 
             if (horarios.isEmpty()) {
                 toast("Nenhum horário disponível")
