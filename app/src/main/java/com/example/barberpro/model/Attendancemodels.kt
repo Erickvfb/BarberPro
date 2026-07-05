@@ -1,5 +1,7 @@
 package com.example.barberpro.model
 
+import com.google.gson.annotations.SerializedName
+
 /**
  * Status do comparecimento do cliente
  */
@@ -13,10 +15,20 @@ enum class AttendanceStatus {
  * Item de consumo adicionado ao atendimento (produto extra)
  */
 data class ConsumptionItem(
-    val id: String,
+
+    @SerializedName("id")
+    val id: String? = null,
+
+    @SerializedName("product_id")
     val productId: String,
+
+    @SerializedName("name")
     val name: String,
+
+    @SerializedName("unit_price")
     val unitPrice: Double,
+
+    @SerializedName("quantity")
     val quantity: Int
 ) {
     fun getTotal(): Double {
@@ -24,9 +36,7 @@ data class ConsumptionItem(
     }
 }
 
-/**
- * Registro completo do atendimento finalizado
- */
+//Registro completo do atendimento finalizado
 data class AttendanceRecord(
     val id: String,
     val appointmentId: String,

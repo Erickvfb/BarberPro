@@ -3,6 +3,7 @@ package com.example.barberpro
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -950,6 +951,18 @@ class ConfirmAttendanceFragment : Fragment() {
                             }\n\n"
                         )
                     }
+                }
+
+                record.consumptions.forEach {
+                    Log.d(
+                        "ATTENDANCE_DEBUG",
+                        """
+        nome=${it.name}
+        qtd=${it.quantity}
+        unit=${it.unitPrice}
+        total=${it.getTotal()}
+        """.trimIndent()
+                    )
                 }
 
                 append(
